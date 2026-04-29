@@ -75,17 +75,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* CTA Final */}
-      <section className="bg-forest-green py-12 mt-8">
-        <div className="max-w-xl mx-auto flex flex-col items-center text-center px-4">
-          <h2 className="text-2xl md:text-3xl font-bold text-snow-white mb-2">¿Listo para el próximo partido?</h2>
-          <p className="text-grass-green mb-8">Únete a cientos de deportistas que ya reservan con CampoVeloz cada semana.</p>
-          <div className="flex flex-col sm:flex-row gap-4 w-full justify-center">
-            <a href="/reservas" className="bg-snow-white text-forest-green px-8 py-3 rounded font-semibold border border-snow-white hover:bg-grass-green hover:text-main transition w-full sm:w-auto">Reservar Mi Cancha</a>
-            <a href="#sedes" className="bg-forest-green border border-snow-white text-snow-white px-8 py-3 rounded font-semibold hover:bg-main hover:text-snow-white transition w-full sm:w-auto">Consultar Sedes</a>
-          </div>
-        </div>
-      </section>
 
       {/* Footer */}
       <Footer />

@@ -1,36 +1,45 @@
 "use client";
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { ArrowRightIcon, UserIcon, EnvelopeIcon, LockClosedIcon, EyeIcon, EyeSlashIcon } from '@heroicons/react/24/solid';
-import users from "../data/users.json";
+import { createClient } from "../../lib/supabase/client";
+import { useRouter } from "next/navigation";
 import "../styles/colors.css";
 
-export default function RegisterForm({ onRegister }: { onRegister: (user: any) => void }) {
+export default function RegisterForm() {
   const [nombre, setNombre] = useState("");
   const [apellido, setApellido] = useState("");
   const [email, setEmail] = useState("");
   const [clave, setClave] = useState("");
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const supabase = useMemo(() => createClient(), []);
+  const router = useRouter();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const exists = users.some((u) => u.email === email);
-    if (exists) {
-      setError("El correo ya está registrado");
+    setError("");
+    setLoading(true);
+
+    const { data, error: signUpError } = await supabase.auth.signUp({
+      email,
+      password: clave,
+      options: {
+        data: {
+          nombre,
+          apellido,
+        },
+      },
+    });
+
+    if (signUpError) {
+      setError("No se pudo registrar. Revisa tus datos.");
+      setLoading(false);
       return;
     }
-    const newUser = {
-      id: users.length + 1,
-      nombre,
-      apellido,
-      email,
-      clave,
-      rol: "usuario",
-      celular: "",
-      estado: "activo"
-    };
-    setError("");
-    onRegister(newUser);
+
+    setLoading(false);
+    router.push("/");
   };
 
   return (
@@ -98,9 +107,10 @@ export default function RegisterForm({ onRegister }: { onRegister: (user: any) =
       {error && <div className="text-danger text-sm">{error}</div>}
       <button
         type="submit"
+        disabled={loading}
         className="w-full flex items-center justify-center gap-2 font-semibold text-snow-white py-3 rounded-md shadow-md transition bg-gradient-to-r from-[#0056D0] to-[#88A9FF] hover:from-[#003a8c] hover:to-[#88A9FF]"
       >
-        Registrarse Ahora <ArrowRightIcon className="w-5 h-5" />
+        {loading ? "Registrando..." : "Registrarse Ahora"} <ArrowRightIcon className="w-5 h-5" />
       </button>
     </form>
   );

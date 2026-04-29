@@ -5,11 +5,6 @@ import RegisterForm from '../components/RegisterForm';
 import '../styles/colors.css';
 
 export default function RegisterPage() {
-  const handleRegister = (user: any) => {
-    alert(`Usuario registrado: ${user.nombre} (${user.email})`);
-    // Aquí puedes guardar el usuario en estado global o redirigir
-  };
-
   return (
     <main className="bg-snow-white min-h-screen flex flex-col">
       <Navbar />
@@ -18,7 +13,7 @@ export default function RegisterPage() {
         <h2 className="text-2xl md:text-3xl font-extrabold text-main mb-1 text-center">Crear Cuenta</h2>
         <p className="text-sm text-main mb-6 text-center">(Crea tu cuenta y reserva tu cancha preferida)</p>
         <div className="w-full max-w-md bg-white rounded-2xl shadow-lg p-8 flex flex-col gap-4">
-          <RegisterForm onRegister={handleRegister} />
+          <RegisterForm />
           <div className="flex items-center my-2">
             <div className="flex-1 h-px" style={{ background: 'rgba(0,0,0,0.2)' }} />
             <span className="mx-2 text-xs" style={{ color: 'rgba(0,0,0,0.8)' }}>o regístrate con</span>

@@ -6,7 +6,9 @@ import '../styles/colors.css';
 
 export default function LoginPage() {
   const handleLogin = (user: any) => {
-    alert(`Bienvenido, ${user.nombre}!`);
+    const displayName =
+      user?.user_metadata?.nombre || user?.email?.split("@")[0] || "usuario";
+    alert(`Bienvenido, ${displayName}!`);
     // Aquí puedes redirigir o guardar el usuario en estado global
   };
 
