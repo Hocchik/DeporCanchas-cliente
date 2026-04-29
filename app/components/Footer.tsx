@@ -22,10 +22,8 @@ export default function Footer() {
         <div>
           <h4 className="font-semibold mb-2">Navegación</h4>
           <ul className="space-y-1 text-sm">
-            <li><a href="/" className="hover:text-grass-green">Sedes</a></li>
-            <li><a href="/membresias" className="hover:text-grass-green">Membresías</a></li>
+            <li><a href="/reservas" className="hover:text-grass-green">Reserva tu cancha</a></li>
             <li><a href="/nosotros" className="hover:text-grass-green">Nosotros</a></li>
-            <li><a href="/contacto" className="hover:text-grass-green">Contacto</a></li>
           </ul>
         </div>
         {/* Soporte */}
@@ -49,7 +47,7 @@ export default function Footer() {
         </div>
       </div>
       <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between border-t border-grass-green pt-4 text-xs text-grass-green">
-        <span>© 2024 DeporCanchas. The Prestigious Pavilion. All rights reserved.</span>
+        <span>© 2026 DeporCanchas. All rights reserved.</span>
         <div className="flex gap-4 mt-2 md:mt-0">
           <a href="#" className="hover:underline">Español</a>
           {/* <a href="#" className="hover:underline">English</a> */}

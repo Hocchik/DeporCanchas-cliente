@@ -105,7 +105,7 @@ const Navbar = () => {
                 >
                   <a
                     href="/configuracion"
-                    className="block w-full text-left px-3 py-2 rounded text-sm text-main hover:bg-grass-green transition"
+                    className="block w-full text-left px-3 py-2 rounded text-sm text-main hover:bg-grass-green hover:text-snow-white hover:scale-105 transform transition duration-150 ease-in-out active:scale-95 focus:outline-none focus:ring-2 focus:ring-forest-green cursor-pointer"
                     role="menuitem"
                     onClick={() => setIsMenuOpen(false)}
                   >
@@ -113,7 +113,7 @@ const Navbar = () => {
                   </a>
                   <button
                     type="button"
-                    className="block w-full text-left px-3 py-2 rounded text-sm text-main hover:bg-grass-green transition"
+                    className="block w-full text-left px-3 py-2 rounded text-sm text-red-600 hover:bg-red-100 hover:text-red-700 hover:scale-105 transform transition duration-150 ease-in-out active:scale-95 focus:outline-none focus:ring-2 focus:ring-red-300 cursor-pointer"
                     role="menuitem"
                     onClick={handleSignOut}
                   >
