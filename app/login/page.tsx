@@ -6,10 +6,7 @@ import '../styles/colors.css';
 
 export default function LoginPage() {
   const handleLogin = (user: any) => {
-    const displayName =
-      user?.user_metadata?.nombre || user?.email?.split("@")[0] || "usuario";
-    alert(`Bienvenido, ${displayName}!`);
-    // Aquí puedes redirigir o guardar el usuario en estado global
+    // Redirección y notificaciones ya manejadas por el componente
   };
 
   return (
@@ -18,7 +15,7 @@ export default function LoginPage() {
       <section className="flex flex-col items-center justify-center flex-1 py-8">
         <div className="mb-2 text-3xl font-bold text-forest-green">DeporCanchas</div>
         <h2 className="text-2xl md:text-3xl font-extrabold text-main mb-1 text-center">Bienvenido de nuevo</h2>
-        <p className="text-sm text-main mb-6 text-center">(Texto de incentivo)</p>
+        {/* <p className="text-sm text-main mb-6 text-center">(Texto de incentivo)</p> */}
         <div className="w-full max-w-md bg-white rounded-2xl shadow-lg p-8 flex flex-col gap-4">
           <LoginForm onLogin={handleLogin} />
         </div>
