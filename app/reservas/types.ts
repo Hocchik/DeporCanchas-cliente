@@ -1,6 +1,8 @@
 export type CourtType = "futbol" | "tenis" | "padel";
 
 export type CourtAvailability = {
+  blockedByDate?: Record<string, string[]>;
+  occupiedByDate?: Record<string, string[]>;
   blockedByWeekday?: Record<string, string[]>;
   occupiedByWeekday?: Record<string, string[]>;
 };
@@ -11,6 +13,16 @@ export type Court = {
   type: CourtType;
   pricePerHour: number;
   image: string;
+  sportKey?: "futbol7" | "futbol11" | "tenis" | "padel";
+  tariffs?: {
+    precio: number;
+    prioridad: number;
+    hora_empieza: string | null;
+    hora_termina: string | null;
+    fecha_empieza: string | null;
+    fecha_termina: string | null;
+    nombre?: string | null;
+  }[];
   availability?: CourtAvailability;
 };
 

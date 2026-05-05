@@ -17,8 +17,8 @@ export default function CourtsList({
   onSelectCourt,
 }: CourtsListProps) {
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-4 text-xs text-main">
+    <div className="space-y-4 text-base">
+      <div className="flex flex-wrap items-center gap-4 text-base text-main">
         <div className="flex items-center gap-2">
           <span
             className="w-3 h-3 rounded-full"
@@ -75,21 +75,21 @@ export default function CourtsList({
                     <h3 className="text-lg font-semibold text-forest-green">
                       {court.name}
                     </h3>
-                    <p className="text-xs text-main">
+                    <p className="text-base text-main">
                       {selectedCampus?.address}
                     </p>
                   </div>
-                  <span className="text-sm font-bold text-forest-green">
+                  <span className="text-base font-bold text-forest-green">
                     S/{court.pricePerHour.toFixed(2)}/h
                   </span>
                 </div>
 
                 <div className="mt-3">
-                  <p className="text-xs text-main mb-2">
+                  <p className="text-base text-main mb-2">
                     Horarios disponibles (1h)
                   </p>
                   <div className="relative">
-                    <div className="grid grid-cols-14 gap-1 text-[10px] text-main mb-1">
+                    <div className="grid grid-cols-14 gap-1 text-sm text-main mb-1">
                       <span className="col-span-1 text-left">8AM</span>
                       <span className="col-start-5 col-span-1 text-center">
                         12PM

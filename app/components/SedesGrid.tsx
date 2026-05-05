@@ -1,36 +1,81 @@
-import React from 'react';
+import React, { useEffect, useState } from "react";
+import { createClient } from "../../lib/supabase/client";
 
-interface Sede {
+type CampusRow = {
+  id: number;
   nombre: string;
-  descripcion: string;
-  deportes: string[];
-  libres: number;
-  imagen: string;
+  ubicacion: string;
+  estado: string;
+};
+
+type CourtRow = {
+  id: number;
+  campus_id: number;
+  nombre: string;
+  tipo_deporte: string;
+  estado: string;
+};
+
+function getCampusImage(nombre: string) {
+  const norm = nombre.toLowerCase();
+  if (norm.includes("miraflores")) return "/Clubterrazas_Miraflores.jpg";
+  if (norm.includes("surco")) return "/futbol-plaza-santiago-surcopeg.jpeg";
+  if (norm.includes("olivos")) return "/Canchas_de_futbol_los_olivos.png";
+  return "/Clubterrazas_Miraflores.jpg";
 }
 
-const sedes: Sede[] = [
-  {
-    nombre: 'Campus Miraflores',
-    descripcion: 'Ubicación céntrica con iluminación LED de alta potencia para juegos nocturnos.',
-    deportes: ['Fútbol', 'Tenis', 'Padel'],
-    libres: 5,
-    imagen: '/Clubterrazas_Miraflores.jpg',
-  },
-  {
-    nombre: 'Campus Surco',
-    descripcion: 'Amplias instalaciones con zona de descanso y cafetería para después del partido.',
-    deportes: ['Fútbol', 'Padel'],
-    libres: 4,
-    imagen: '/futbol-plaza-santiago-surcopeg.jpeg',
-  },
-  {
-    nombre: 'Campus Los Olivos',
-    descripcion: 'Canchas de césped sintético de última generación y gran ambiente comunitario.',
-    deportes: ['Fútbol', 'Tenis'],
-    libres: 6,
-    imagen: '/Canchas_de_futbol_los_olivos.png',
-  },
-];
+export default function SedesGrid() {
+  const [sedes, setSedes] = useState<{
+    nombre: string;
+    descripcion: string;
+    deportes: string[];
+    libres: number;
+    imagen: string;
+  }[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      setError("");
+      try {
+        const supabase = createClient();
+        const [campusRes, courtsRes] = await Promise.all([
+          supabase.from("campus").select("id, nombre, ubicacion, estado"),
+          supabase.from("canchas_deportivas").select("id, campus_id, nombre, tipo_deporte, estado"),
+        ]);
+        if (campusRes.error || courtsRes.error) throw campusRes.error || courtsRes.error;
+        const campusRows = (campusRes.data ?? []) as CampusRow[];
+        const courtRows = (courtsRes.data ?? []) as CourtRow[];
+        const sedesData = campusRows.map((campus) => {
+          const courts = courtRows.filter((c) => c.campus_id === campus.id);
+          const deportesSet = new Set<string>();
+          courts.forEach((c) => {
+            if (c.tipo_deporte) {
+              if (c.tipo_deporte.toLowerCase().includes("tenis")) deportesSet.add("Tenis");
+              else if (c.tipo_deporte.toLowerCase().includes("padel")) deportesSet.add("Padel");
+              else deportesSet.add("Fútbol");
+            }
+          });
+          const libres = courts.filter((c) => c.estado?.toLowerCase() === "libre" || c.estado?.toLowerCase() === "disponible").length;
+          return {
+            nombre: campus.nombre,
+            descripcion: campus.ubicacion || "",
+            deportes: Array.from(deportesSet),
+            libres,
+            imagen: getCampusImage(campus.nombre),
+          };
+        });
+        setSedes(sedesData);
+      } catch (e: any) {
+        setError(e.message || "Error cargando sedes");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
 
 export default function SedesGrid() {
   return (

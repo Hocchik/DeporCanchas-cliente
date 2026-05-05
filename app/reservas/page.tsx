@@ -10,30 +10,266 @@ import {
 } from "@heroicons/react/24/solid";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
-import reservasData from "../data/reservas.json";
 import CourtsList from "./components/CourtsList";
 import CourtsMap from "./components/CourtsMap";
 import CourtDetails from "./components/CourtDetails";
-import type { CourtType, ReservasData } from "./types";
+import type { Court, CourtType, ReservasData } from "./types";
 import { SLOT_TIMES, WEEKDAY_LABELS, getStatusForCourt } from "./utils";
+import { createClient } from "../../lib/supabase/client";
 import "../styles/colors.css";
 
-export default function Reservas() {
-  const campuses = (reservasData as unknown as ReservasData).campuses;
-  const [selectedCampusId, setSelectedCampusId] = useState(
-    campuses[0]?.id ?? ""
+type CampusRow = {
+  id: number;
+  nombre: string;
+  ubicacion: string;
+  estado: string;
+};
+
+type CourtRow = {
+  id: number;
+  campus_id: number;
+  nombre: string;
+  tipo_deporte: string;
+  estado: string;
+};
+
+type AvailabilityRow = {
+  canchasdep_id: number;
+  dias_de_la_semana: number;
+  hora_abre: string;
+  hora_cierra: string;
+};
+
+type ReservaRow = {
+  canchasdep_id: number;
+  fecha_empieza: string;
+  fecha_termina: string;
+  estado: string | null;
+};
+
+type TarifaRow = {
+  canchasdep_id: number;
+  precio_reemplazo: number | null;
+  tarifas: {
+    nombre: string | null;
+    precio: number;
+    prioridad: number;
+    hora_empieza: string | null;
+    hora_termina: string | null;
+    fecha_empieza: string | null;
+    fecha_termina: string | null;
+  }[];
+};
+
+type BaseTariffs = {
+  futbol7: number;
+  futbol11: number;
+  tenis: number;
+  padel: number;
+};
+
+const toDateKey = (date: Date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
+const toMinutes = (timeValue: string) => {
+  const [hours, minutes] = timeValue.split(":").map(Number);
+  return hours * 60 + minutes;
+};
+
+const isReservationActive = (estado: string | null) => {
+  if (!estado) {
+    return true;
+  }
+  const normalized = estado.trim().toLowerCase();
+  return !["cancelado", "anulado", "rechazado"].includes(normalized);
+};
+
+const normalizeText = (value: string) =>
+  value.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+const matchesSportKey = (sportKey: Court["sportKey"], name?: string | null) => {
+  if (!name) {
+    return false;
+  }
+  const normalized = normalizeText(name);
+  if (sportKey === "tenis") {
+    return normalized.includes("tenis");
+  }
+  if (sportKey === "padel") {
+    return normalized.includes("padel");
+  }
+  if (sportKey === "futbol11") {
+    return (
+      normalized.includes("futbol 11") ||
+      normalized.includes("futbol11") ||
+      normalized.includes("futbol once")
+    );
+  }
+  return (
+    normalized.includes("futbol 7") ||
+    normalized.includes("futbol7") ||
+    normalized.includes("futsal")
   );
+};
+
+const isDateInRange = (
+  dateKey: string,
+  start: string | null,
+  end: string | null
+) => {
+  if (start && dateKey < start) {
+    return false;
+  }
+  if (end && dateKey > end) {
+    return false;
+  }
+  return true;
+};
+
+const resolveCourtPrice = (
+  court: Court,
+  date: Date,
+  baseTariffs: BaseTariffs
+) => {
+  const dateKey = toDateKey(date);
+  const sportKey = court.sportKey ?? "futbol7";
+  const candidates = (court.tariffs ?? [])
+    .filter((tarifa) => matchesSportKey(sportKey, tarifa.nombre))
+    .filter((tarifa) =>
+      isDateInRange(dateKey, tarifa.fecha_empieza, tarifa.fecha_termina)
+    );
+
+  if (candidates.length) {
+    candidates.sort((a, b) => {
+      const priorityA = a.prioridad ?? 0;
+      const priorityB = b.prioridad ?? 0;
+      return priorityA - priorityB;
+    });
+    return candidates[0].precio ?? 0;
+  }
+
+  return baseTariffs[sportKey] ?? 0;
+};
+
+const courtImageForType = (type: CourtType) => {
+  if (type === "futbol") {
+    return "/Canchas_de_futbol_los_olivos.png";
+  }
+  if (type === "tenis") {
+    return "/Canchasfutbol8.jpg";
+  }
+  return "/Clubterrazas_Miraflores.jpg";
+};
+
+const buildAvailabilityForCourt = (
+  courtId: number,
+  dates: Date[],
+  availabilityRows: AvailabilityRow[],
+  reservas: ReservaRow[]
+) => {
+  const blockedByDate: Record<string, string[]> = {};
+  const occupiedByDate: Record<string, string[]> = {};
+
+  const availabilityByDay = availabilityRows
+    .filter((row) => row.canchasdep_id === courtId)
+    .reduce<Record<string, { start: number; end: number }[]>>(
+      (accumulator, row) => {
+        const key = String(row.dias_de_la_semana);
+        const start = toMinutes(row.hora_abre);
+        const end = toMinutes(row.hora_cierra);
+        if (!accumulator[key]) {
+          accumulator[key] = [];
+        }
+        accumulator[key].push({ start, end });
+        return accumulator;
+      },
+      {}
+    );
+
+  const reservationsByDate = reservas
+    .filter((row) => row.canchasdep_id === courtId)
+    .filter((row) => isReservationActive(row.estado))
+    .reduce<Record<string, Set<string>>>((accumulator, row) => {
+      const start = new Date(row.fecha_empieza);
+      const end = new Date(row.fecha_termina);
+      const dateKey = toDateKey(start);
+      const startMinutes = start.getHours() * 60 + start.getMinutes();
+      const endMinutes = end.getHours() * 60 + end.getMinutes();
+      const slotSet = accumulator[dateKey] ?? new Set<string>();
+
+      SLOT_TIMES.forEach((time) => {
+        const slotMinutes = toMinutes(time);
+        if (slotMinutes >= startMinutes && slotMinutes < endMinutes) {
+          slotSet.add(time);
+        }
+      });
+
+      accumulator[dateKey] = slotSet;
+      return accumulator;
+    }, {});
+
+  dates.forEach((date) => {
+    const dateKey = toDateKey(date);
+    const dayKey = String(date.getDay());
+    const ranges = availabilityByDay[dayKey] ?? [];
+
+    const blockedTimes = SLOT_TIMES.filter((time) => {
+      if (!ranges.length) {
+        return true;
+      }
+      const slotMinutes = toMinutes(time);
+      return !ranges.some(
+        (range) => slotMinutes >= range.start && slotMinutes < range.end
+      );
+    });
+
+    blockedByDate[dateKey] = blockedTimes;
+
+    const occupiedSet = reservationsByDate[dateKey];
+    occupiedByDate[dateKey] = occupiedSet
+      ? Array.from(occupiedSet.values())
+      : [];
+  });
+
+  return { blockedByDate, occupiedByDate };
+};
+
+export default function Reservas() {
+  const [campuses, setCampuses] = useState<ReservasData["campuses"]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
+  const [selectedCampusId, setSelectedCampusId] = useState("");
   const [selectedSport, setSelectedSport] = useState<"all" | CourtType>(
     "all"
   );
-  const [selectedCourtId, setSelectedCourtId] = useState(
-    campuses[0]?.courts[0]?.id ?? ""
-  );
+  const [selectedCourtId, setSelectedCourtId] = useState("");
   const [selectedDateIndex, setSelectedDateIndex] = useState(0);
   const [windowStart, setWindowStart] = useState(0);
   const [viewMode, setViewMode] = useState<"list" | "map">("list");
   const [selectedSlots, setSelectedSlots] = useState<string[]>([]);
   const [selectionMessage, setSelectionMessage] = useState("");
+  const [viewportWidth, setViewportWidth] = useState(0);
+  const [isCampusMenuOpen, setIsCampusMenuOpen] = useState(false);
+  const [baseTariffs, setBaseTariffs] = useState<BaseTariffs>({
+    futbol7: 0,
+    futbol11: 0,
+    tenis: 0,
+    padel: 0,
+  });
+
+  const visibleCount = useMemo(() => {
+    if (viewportWidth < 480) {
+      return 3;
+    }
+    if (viewportWidth < 768) {
+      return 5;
+    }
+    return 7;
+  }, [viewportWidth]);
 
   const allDates = useMemo(() => {
     const today = new Date();
@@ -45,8 +281,8 @@ export default function Reservas() {
   }, []);
 
   const visibleDates = useMemo(
-    () => allDates.slice(windowStart, windowStart + 7),
-    [allDates, windowStart]
+    () => allDates.slice(windowStart, windowStart + visibleCount),
+    [allDates, windowStart, visibleCount]
   );
 
   const selectedDate = allDates[selectedDateIndex] ?? allDates[0];
@@ -55,6 +291,12 @@ export default function Reservas() {
     (campus) => campus.id === selectedCampusId
   );
 
+  useEffect(() => {
+    if (campuses.length && !selectedCampusId) {
+      setSelectedCampusId(campuses[0].id);
+    }
+  }, [campuses, selectedCampusId]);
+
   const filteredCourts = useMemo(() => {
     const courts = selectedCampus?.courts ?? [];
     if (selectedSport === "all") {
@@ -62,6 +304,17 @@ export default function Reservas() {
     }
     return courts.filter((court) => court.type === selectedSport);
   }, [selectedCampus, selectedSport]);
+
+  const pricedCourts = useMemo(
+    () =>
+      filteredCourts.map((court) => ({
+        ...court,
+        pricePerHour: resolveCourtPrice(court, selectedDate, baseTariffs),
+      })),
+    [filteredCourts, selectedDate, baseTariffs]
+  );
+
+  console.log("Priced courts:", pricedCourts);
 
   useEffect(() => {
     if (!filteredCourts.length) {
@@ -79,15 +332,206 @@ export default function Reservas() {
   }, [selectedCourtId, selectedDateIndex]);
 
   useEffect(() => {
+    let isMounted = true;
+    const supabase = createClient();
+
+    const loadReservasData = async () => {
+      try {
+        setIsLoading(true);
+        setLoadError("");
+
+        const today = new Date();
+        const startDate = new Date(
+          today.getFullYear(),
+          today.getMonth(),
+          today.getDate()
+        );
+        const endDate = new Date(startDate);
+        endDate.setDate(startDate.getDate() + 21);
+
+        const [campusResult, courtsResult, availabilityResult, tarifasResult, reservasResult, baseTarifasResult] =
+          await Promise.all([
+            supabase.from("campus").select("id, nombre, ubicacion, estado"),
+            supabase
+              .from("canchas_deportivas")
+              .select("id, campus_id, nombre, tipo_deporte, estado"),
+            supabase
+              .from("cancha_disponibilidad")
+              .select("canchasdep_id, dias_de_la_semana, hora_abre, hora_cierra"),
+            supabase
+              .from("tarifas_canchasdep")
+              .select(
+                "canchasdep_id, precio_reemplazo, tarifas (nombre, precio, prioridad, hora_empieza, hora_termina, fecha_empieza, fecha_termina)"
+              ),
+            supabase
+              .from("reservas")
+              .select("canchasdep_id, fecha_empieza, fecha_termina, estado")
+              .gte("fecha_empieza", startDate.toISOString())
+              .lt("fecha_empieza", endDate.toISOString()),
+            supabase.from("tarifas").select("nombre, precio"),
+          ]);
+
+        if (
+          campusResult.error ||
+          courtsResult.error ||
+          availabilityResult.error ||
+          tarifasResult.error ||
+          reservasResult.error ||
+          baseTarifasResult.error
+        ) {
+          throw (
+            campusResult.error ||
+            courtsResult.error ||
+            availabilityResult.error ||
+            tarifasResult.error ||
+            reservasResult.error ||
+            baseTarifasResult.error
+          );
+        }
+
+        const campusRows = (campusResult.data ?? []) as CampusRow[];
+        const courtRows = (courtsResult.data ?? []) as CourtRow[];
+        const availabilityRows =
+          (availabilityResult.data ?? []) as AvailabilityRow[];
+        const tarifaRows = (tarifasResult.data ?? []) as TarifaRow[];
+        const reservaRows = (reservasResult.data ?? []) as ReservaRow[];
+        const baseTarifaRows =
+          (baseTarifasResult.data ?? []) as { nombre: string; precio: number }[];
+
+        const baseByName = baseTarifaRows.reduce<BaseTariffs>(
+          (accumulator, tarifa) => {
+            const normalized = normalizeText(tarifa.nombre);
+            if (normalized.includes("futbol 11") || normalized.includes("futbol11")) {
+              accumulator.futbol11 = tarifa.precio;
+            } else if (
+              normalized.includes("futbol 7") ||
+              normalized.includes("futbol7") ||
+              normalized.includes("futsal")
+            ) {
+              accumulator.futbol7 = tarifa.precio;
+            } else if (normalized.includes("padel")) {
+              accumulator.padel = tarifa.precio;
+            } else if (normalized.includes("tenis")) {
+              accumulator.tenis = tarifa.precio;
+            }
+            return accumulator;
+          },
+          { futbol7: 0, futbol11: 0, tenis: 0, padel: 0 }
+        );
+
+        const mappedCampuses = campusRows.map((campus) => {
+          const campusCourts = courtRows
+            .filter((court) => court.campus_id === campus.id)
+            .map((court) => {
+              const normalizedType = court.tipo_deporte
+                .toLowerCase()
+                .normalize("NFD")
+                .replace(/[\u0300-\u036f]/g, "");
+              let sportKey: Court["sportKey"] = "futbol7";
+              let type: CourtType = "futbol";
+              if (normalizedType.includes("tenis")) {
+                type = "tenis";
+                sportKey = "tenis";
+              } else if (normalizedType.includes("padel")) {
+                type = "padel";
+                sportKey = "padel";
+              } else if (
+                normalizedType.includes("futbol 11") ||
+                normalizedType.includes("futbol11") ||
+                normalizedType.includes("futbol once")
+              ) {
+                type = "futbol";
+                sportKey = "futbol11";
+              } else if (
+                normalizedType.includes("futbol") ||
+                normalizedType.includes("futsal")
+              ) {
+                type = "futbol";
+                sportKey = "futbol7";
+              }
+
+              const availability = buildAvailabilityForCourt(
+                court.id,
+                allDates,
+                availabilityRows,
+                reservaRows
+              );
+
+              const tariffCandidates = tarifaRows
+                .filter((tarifa) => tarifa.canchasdep_id === court.id)
+                .flatMap((tarifa) => {
+                  const items = Array.isArray(tarifa.tarifas)
+                    ? tarifa.tarifas
+                    : tarifa.tarifas
+                      ? [tarifa.tarifas]
+                      : [];
+                  return items.map((item) => ({
+                    ...item,
+                    precio: tarifa.precio_reemplazo ?? item.precio,
+                  }));
+                });
+
+              return {
+                id: String(court.id),
+                name: court.nombre,
+                type,
+                sportKey,
+                tariffs: tariffCandidates,
+                pricePerHour: 0,
+                image: courtImageForType(type),
+                availability,
+              } satisfies Court;
+            });
+
+          return {
+            id: String(campus.id),
+            name: campus.nombre,
+            address: campus.ubicacion,
+            courts: campusCourts,
+          };
+        });
+
+        if (isMounted) {
+          setBaseTariffs(baseByName);
+          setCampuses(mappedCampuses);
+        }
+      } catch (error) {
+        if (!isMounted) {
+          return;
+        }
+        const message = error instanceof Error ? error.message : String(error);
+        setLoadError(message);
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    loadReservasData();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [allDates]);
+
+  useEffect(() => {
+    const updateWidth = () => setViewportWidth(window.innerWidth);
+    updateWidth();
+    window.addEventListener("resize", updateWidth);
+    return () => window.removeEventListener("resize", updateWidth);
+  }, []);
+
+  useEffect(() => {
     if (selectedDateIndex < windowStart) {
       setSelectedDateIndex(windowStart);
     }
-    if (selectedDateIndex > windowStart + 6) {
-      setSelectedDateIndex(windowStart + 6);
+    if (selectedDateIndex > windowStart + visibleCount - 1) {
+      setSelectedDateIndex(windowStart + visibleCount - 1);
     }
-  }, [selectedDateIndex, windowStart]);
+  }, [selectedDateIndex, windowStart, visibleCount]);
 
-  const selectedCourt = filteredCourts.find(
+  const selectedCourt = pricedCourts.find(
     (court) => court.id === selectedCourtId
   );
 
@@ -139,20 +583,101 @@ export default function Reservas() {
     ? selectedSlots.length * selectedCourt.pricePerHour
     : 0;
 
+    
   return (
-    <main className="min-h-screen" style={{ backgroundColor: "#FBF9F5" }}>
+    <main
+      className="min-h-screen text-base"
+      style={
+        {
+          backgroundColor: "#FBF9F5",
+          ["--grass-green" as string]: "#84C940",
+        } as React.CSSProperties
+      }
+    >
       <Navbar />
-      <div className="max-w-6xl mx-auto px-4 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-[220px_1fr_280px] gap-6">
+      <div className="w-full px-4 py-4 md:px-0 md:py-0">
+        {isLoading ? (
+          <div className="bg-snow-white rounded-2xl p-6 text-base text-main">
+            Cargando sedes y canchas...
+          </div>
+        ) : loadError ? (
+          <div className="bg-snow-white rounded-2xl p-6 text-base text-main">
+            Ocurrio un error al cargar las reservas: {loadError}
+          </div>
+        ) : !campuses.length ? (
+          <div className="bg-snow-white rounded-2xl p-6 text-base text-main">
+            No hay sedes disponibles en este momento.
+          </div>
+        ) : (
+          <>
+            <button
+              type="button"
+              onClick={() => setIsCampusMenuOpen(true)}
+              className="md:hidden mb-4 inline-flex items-center gap-2 rounded-xl border border-forest-green px-3 py-2 text-base font-semibold text-forest-green"
+              aria-label="Abrir menu de sedes"
+            >
+              <span className="text-lg">≡</span>
+              Seleccionar sede
+            </button>
+
+            {isCampusMenuOpen && (
+              <div className="fixed inset-0 z-50 md:hidden">
+                <div
+                  className="absolute inset-0 bg-black/40"
+                  onClick={() => setIsCampusMenuOpen(false)}
+                />
+                <div className="relative mx-auto mt-16 w-[90%] max-w-sm rounded-2xl bg-snow-white p-5 shadow-xl">
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-xl font-semibold text-forest-green">
+                      Nuestros Campus
+                    </h2>
+                    <button
+                      type="button"
+                      onClick={() => setIsCampusMenuOpen(false)}
+                      className="rounded-full border border-stone-gray px-3 py-1 text-base"
+                      aria-label="Cerrar menu de sedes"
+                    >
+                      ×
+                    </button>
+                  </div>
+                  <p className="text-base text-main mb-3">
+                    Selecciona tu campus preferido
+                  </p>
+                  <div className="space-y-2">
+                    {campuses.map((campus) => (
+                      <button
+                        key={campus.id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedCampusId(campus.id);
+                          setIsCampusMenuOpen(false);
+                        }}
+                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition ${
+                          selectedCampusId === campus.id
+                            ? "bg-grass-green text-forest-green"
+                            : "text-main hover:bg-stone-gray"
+                        }`}
+                      >
+                        <span className="text-base font-semibold">
+                          {campus.name}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 gap-6 items-start md:items-stretch md:grid-cols-[260px_minmax(0,1fr)_320px]">
           <aside
-            className="rounded-2xl p-5"
+            className="order-1 hidden h-auto shadow-sm md:order-1 md:block md:h-full p-5"
             style={{ backgroundColor: "#F7FAFC" }}
           >
             <div className="mb-4">
-              <h2 className="text-base font-semibold text-forest-green">
+              <h2 className="text-xl font-semibold text-forest-green mt-5">
                 Nuestros Campus
               </h2>
-              <p className="text-xs text-main">Selecciona tu campus preferido</p>
+              <p className="text-base text-main">Selecciona tu campus preferido</p>
             </div>
             <div className="space-y-2">
               {campuses.map((campus) => (
@@ -166,26 +691,17 @@ export default function Reservas() {
                       : "text-main hover:bg-snow-white"
                   }`}
                 >
-                  <span
-                    className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold ${
-                      selectedCampusId === campus.id
-                        ? "bg-forest-green text-snow-white"
-                        : "bg-snow-white text-forest-green"
-                    }`}
-                  >
-                    ◎
-                  </span>
-                  <span className="text-sm font-semibold">{campus.name}</span>
+                  <span className="text-base font-semibold">{campus.name}</span>
                 </button>
               ))}
             </div>
           </aside>
 
-          <section className="space-y-5">
+          <section className="order-2 md:order-2 space-y-5 pt-4 md:pt-8">
             <div>
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <div>
-                  <h2 className="text-xl font-semibold text-main">
+                  <h2 className="text-2xl font-semibold text-main">
                     {selectedCampus?.name ?? "Sede"}
                   </h2>
                 </div>
@@ -257,7 +773,7 @@ export default function Reservas() {
                       onClick={() =>
                         setSelectedSport(option.id as "all" | CourtType)
                       }
-                      className={`flex items-center gap-2 px-3 py-2 rounded-full text-xs font-semibold border transition ${
+                      className={`flex items-center gap-2 px-3 py-2 rounded-full text-base font-semibold border transition ${
                         selectedSport === option.id
                           ? "bg-forest-green text-snow-white border-forest-green"
                           : "bg-transparent text-main border-stone-gray hover:border-forest-green"
@@ -289,7 +805,7 @@ export default function Reservas() {
                           key={date.toISOString()}
                           type="button"
                           onClick={() => setSelectedDateIndex(absoluteIndex)}
-                          className={`w-14 py-2 rounded-xl text-center text-xs font-semibold border transition ${
+                          className={`w-16 py-2 rounded-xl text-center text-base font-semibold border transition ${
                             selectedDateIndex === absoluteIndex
                               ? "bg-forest-green text-snow-white border-forest-green"
                               : "bg-snow-white text-main border-transparent"
@@ -298,7 +814,7 @@ export default function Reservas() {
                           <span className="block">
                             {isToday ? "Hoy" : WEEKDAY_LABELS[date.getDay()]}
                           </span>
-                          <span className="text-base font-bold">
+                          <span className="text-lg font-bold">
                             {date.getDate()}
                           </span>
                         </button>
@@ -325,7 +841,7 @@ export default function Reservas() {
               <CourtsMap />
             ) : (
               <CourtsList
-                courts={filteredCourts}
+                courts={pricedCourts}
                 selectedCampus={selectedCampus}
                 selectedDate={selectedDate}
                 selectedCourtId={selectedCourtId}
@@ -334,17 +850,21 @@ export default function Reservas() {
             )}
           </section>
 
-          <CourtDetails
-            selectedCourt={selectedCourt}
-            selectedCampus={selectedCampus}
-            selectedDate={selectedDate}
-            selectedCourtSlots={selectedCourtSlots}
-            selectedSlots={selectedSlots}
-            selectionMessage={selectionMessage}
-            totalPrice={totalPrice}
-            onToggleSlot={handleSlotToggle}
-          />
-        </div>
+          <div className="order-3 md:order-3 h-auto md:h-full">
+            <CourtDetails
+              selectedCourt={selectedCourt}
+              selectedCampus={selectedCampus}
+              selectedDate={selectedDate}
+              selectedCourtSlots={selectedCourtSlots}
+              selectedSlots={selectedSlots}
+              selectionMessage={selectionMessage}
+              totalPrice={totalPrice}
+              onToggleSlot={handleSlotToggle}
+            />
+          </div>
+            </div>
+          </>
+        )}
       </div>
       <Footer />
     </main>

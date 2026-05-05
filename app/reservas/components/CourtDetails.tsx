@@ -24,11 +24,11 @@ export default function CourtDetails({
 }: CourtDetailsProps) {
   if (!selectedCourt) {
     return (
-      <aside className="bg-snow-white rounded-2xl p-5 shadow-sm h-fit">
-        <h2 className="text-sm font-semibold text-main mb-4">
+      <aside className="bg-snow-white p-5 shadow-sm h-full text-base">
+          <h2 className="text-xl font-semibold text-main mb-4">
           Detalles de cancha
         </h2>
-        <p className="text-sm text-main">
+        <p className="text-base text-main">
           No hay canchas disponibles para este filtro.
         </p>
       </aside>
@@ -36,25 +36,25 @@ export default function CourtDetails({
   }
 
   return (
-    <aside className="bg-snow-white rounded-2xl p-5 shadow-sm h-fit">
-      <h2 className="text-sm font-semibold text-main mb-4">
+    <aside className="bg-snow-white p-5 shadow-sm h-full text-base">
+        <h2 className="text-xl font-semibold text-main mb-4 mt-5">
         Detalles de cancha
       </h2>
       <div className="space-y-4">
         <div>
-          <p className="text-sm font-semibold text-forest-green">
+            <p className="text-lg font-semibold text-forest-green">
             {selectedCourt.name}
           </p>
-          <p className="text-xs text-main">
+          <p className="text-base text-main">
             {selectedCampus?.name} - {selectedCampus?.address}
           </p>
-          <p className="text-xs text-main mt-1">
+          <p className="text-base text-main mt-1">
             Fecha: {selectedDate?.toLocaleDateString("es-PE")}
           </p>
         </div>
 
         <div>
-          <p className="text-xs text-main mb-2">Horarios disponibles (1h)</p>
+          <p className="text-base text-main mb-2">Horarios disponibles (1h)</p>
           <div className="grid grid-cols-2 gap-2">
             {selectedCourtSlots.map((slot) => {
               const isSelected = selectedSlots.includes(slot.time);
@@ -85,7 +85,7 @@ export default function CourtDetails({
                   key={slot.time}
                   type="button"
                   onClick={() => onToggleSlot(slot.time)}
-                  className="px-2 py-2 rounded-md text-xs font-semibold border transition"
+                  className="px-2 py-2 rounded-md text-base font-semibold border transition"
                   style={{
                     backgroundColor,
                     color: textColor,
@@ -94,14 +94,16 @@ export default function CourtDetails({
                   }}
                   disabled={!isFree}
                 >
-                  {isOccupied ? `× ${formatTimeLabel(slot.time)}` : formatTimeLabel(slot.time)}
+                  {isOccupied
+                    ? `× ${formatTimeLabel(slot.time)}`
+                    : formatTimeLabel(slot.time)}
                 </button>
               );
             })}
           </div>
         </div>
 
-        <div className="rounded-xl bg-stone-gray px-3 py-3 text-xs text-main">
+        <div className="rounded-xl bg-stone-gray px-3 py-3 text-base text-main">
           <p className="font-semibold">Ayuda de reserva</p>
           <p>
             Puedes elegir 1 hora o 2 horas consecutivas. Si una hora esta
@@ -115,8 +117,8 @@ export default function CourtDetails({
         </div>
 
         <div className="flex items-center justify-between border-t border-stone-gray pt-4">
-          <span className="text-sm font-semibold text-main">Total:</span>
-          <span className="text-lg font-bold text-forest-green">
+          <span className="text-base font-semibold text-main">Total:</span>
+          <span className="text-xl font-bold text-forest-green">
             S/{totalPrice.toFixed(2)}
           </span>
         </div>

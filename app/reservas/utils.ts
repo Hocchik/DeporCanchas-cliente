@@ -25,6 +25,13 @@ export const LEGEND_COLORS: Record<TimeStatus, string> = {
 
 export const WEEKDAY_LABELS = ["Dom", "Lun", "Mar", "Mie", "Jue", "Vie", "Sab"];
 
+const toDateKey = (date: Date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
 export const formatTimeLabel = (time24: string) => {
   const [hours, minutes] = time24.split(":").map(Number);
   const period = hours >= 12 ? "PM" : "AM";
@@ -33,12 +40,19 @@ export const formatTimeLabel = (time24: string) => {
 };
 
 export const getStatusForCourt = (court: Court, date: Date): CourtTimeSlot[] => {
+  const dateKey = toDateKey(date);
   const dayKey = String(date.getDay());
+  const blockedByDate = court.availability?.blockedByDate?.[dateKey] ?? [];
+  const occupiedByDate = court.availability?.occupiedByDate?.[dateKey] ?? [];
   const blocked = new Set(
-    court.availability?.blockedByWeekday?.[dayKey] ?? []
+    blockedByDate.length
+      ? blockedByDate
+      : court.availability?.blockedByWeekday?.[dayKey] ?? []
   );
   const occupied = new Set(
-    court.availability?.occupiedByWeekday?.[dayKey] ?? []
+    occupiedByDate.length
+      ? occupiedByDate
+      : court.availability?.occupiedByWeekday?.[dayKey] ?? []
   );
 
   return SLOT_TIMES.map((time) => {

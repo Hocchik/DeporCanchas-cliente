@@ -3,7 +3,7 @@ import { EnvelopeIcon, PhoneIcon, MapPinIcon, GlobeAltIcon, ShareIcon, TrophyIco
 
 export default function Footer() {
   return (
-    <footer className="bg-forest-green text-snow-white pt-12 pb-4 px-4 mt-16 border-t border-forest-green">
+    <footer className="bg-forest-green text-snow-white pt-12 pb-4 px-4  border-t border-forest-green">
       <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-10 mb-8">
         {/* Marca */}
         <div>
