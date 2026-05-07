@@ -252,7 +252,6 @@ export default function Reservas() {
   const [viewMode, setViewMode] = useState<"list" | "map">("list");
   const [selectedSlots, setSelectedSlots] = useState<string[]>([]);
   const [selectionMessage, setSelectionMessage] = useState("");
-  const [viewportWidth, setViewportWidth] = useState(0);
   const [isCampusMenuOpen, setIsCampusMenuOpen] = useState(false);
   const [baseTariffs, setBaseTariffs] = useState<BaseTariffs>({
     futbol7: 0,
@@ -261,15 +260,7 @@ export default function Reservas() {
     padel: 0,
   });
 
-  const visibleCount = useMemo(() => {
-    if (viewportWidth < 480) {
-      return 3;
-    }
-    if (viewportWidth < 768) {
-      return 5;
-    }
-    return 7;
-  }, [viewportWidth]);
+  const visibleCount = useMemo(() => 2, []);
 
   const allDates = useMemo(() => {
     const today = new Date();
@@ -516,13 +507,6 @@ export default function Reservas() {
   }, [allDates]);
 
   useEffect(() => {
-    const updateWidth = () => setViewportWidth(window.innerWidth);
-    updateWidth();
-    window.addEventListener("resize", updateWidth);
-    return () => window.removeEventListener("resize", updateWidth);
-  }, []);
-
-  useEffect(() => {
     if (selectedDateIndex < windowStart) {
       setSelectedDateIndex(windowStart);
     }
@@ -621,7 +605,7 @@ export default function Reservas() {
             </button>
 
             {isCampusMenuOpen && (
-              <div className="fixed inset-0 z-50 md:hidden">
+              <div className="fixed inset-0 z-40 md:hidden">
                 <div
                   className="absolute inset-0 bg-black/40"
                   onClick={() => setIsCampusMenuOpen(false)}
@@ -668,9 +652,9 @@ export default function Reservas() {
               </div>
             )}
 
-            <div className="grid grid-cols-1 gap-6 items-start md:items-stretch md:grid-cols-[260px_minmax(0,1fr)_320px]">
+            <div className="grid grid-cols-1 gap-6 items-start md:items-start md:grid-cols-[260px_minmax(0,1fr)_320px]">
           <aside
-            className="order-1 hidden h-auto shadow-sm md:order-1 md:block md:h-full p-5"
+            className="order-1 hidden h-auto shadow-sm md:order-1 md:block p-5 md:sticky md:top-0 self-start"
             style={{ backgroundColor: "#F7FAFC" }}
           >
             <div className="mb-4">
@@ -759,80 +743,93 @@ export default function Reservas() {
                 </div>
               </div>
 
-              <div className="flex flex-wrap items-center justify-between gap-4 mt-4">
-                <div className="flex flex-wrap gap-2">
-                  {[
-                    { id: "all", label: "Todos", icon: SparklesIcon },
-                    { id: "futbol", label: "Futbol", icon: TrophyIcon },
-                    { id: "tenis", label: "Tenis", icon: BoltIcon },
-                    { id: "padel", label: "Padel", icon: QueueListIcon },
-                  ].map((option) => (
-                    <button
-                      key={option.id}
-                       type="button"
-                      onClick={() =>
-                        setSelectedSport(option.id as "all" | CourtType)
-                      }
-                      className={`flex items-center gap-2 px-3 py-2 rounded-full text-base font-semibold border transition ${
-                        selectedSport === option.id
-                          ? "bg-forest-green text-snow-white border-forest-green"
-                          : "bg-transparent text-main border-stone-gray hover:border-forest-green"
-                      }`}
-                    >
-                      <option.icon className="w-4 h-4" />
-                      {option.label}
-                    </button>
-                  ))}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                <div className="bg-snow-white rounded-2xl p-4 shadow-sm">
+                  <p className="text-base font-semibold text-main mb-3">
+                    Filtrar canchas
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {[
+                      { id: "all", label: "Todos", icon: SparklesIcon },
+                      { id: "futbol", label: "Futbol", icon: TrophyIcon },
+                      { id: "tenis", label: "Tenis", icon: BoltIcon },
+                      { id: "padel", label: "Padel", icon: QueueListIcon },
+                    ].map((option) => (
+                      <button
+                        key={option.id}
+                        type="button"
+                        onClick={() =>
+                          setSelectedSport(option.id as "all" | CourtType)
+                        }
+                        className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-sm font-semibold border transition ${
+                          selectedSport === option.id
+                            ? "bg-forest-green text-snow-white border-forest-green"
+                            : "bg-transparent text-main border-stone-gray hover:border-forest-green"
+                        }`}
+                      >
+                        <option.icon className="w-3.5 h-3.5" />
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setWindowStart((current) => Math.max(0, current - 1))
-                    }
-                    className="px-3 py-2 rounded-lg border border-stone-gray text-main"
-                    aria-label="Ver dias anteriores"
-                  >
-                    ‹
-                  </button>
+                <div className="bg-snow-white rounded-2xl p-4 shadow-sm">
+                  <p className="text-base font-semibold text-main mb-3">
+                    Selecciona fecha
+                  </p>
                   <div className="flex items-center gap-2">
-                    {visibleDates.map((date, index) => {
-                      const absoluteIndex = windowStart + index;
-                      const isToday = absoluteIndex === 0;
-                      return (
-                        <button
-                          key={date.toISOString()}
-                          type="button"
-                          onClick={() => setSelectedDateIndex(absoluteIndex)}
-                          className={`w-16 py-2 rounded-xl text-center text-base font-semibold border transition ${
-                            selectedDateIndex === absoluteIndex
-                              ? "bg-forest-green text-snow-white border-forest-green"
-                              : "bg-snow-white text-main border-transparent"
-                          }`}
-                        >
-                          <span className="block">
-                            {isToday ? "Hoy" : WEEKDAY_LABELS[date.getDay()]}
-                          </span>
-                          <span className="text-lg font-bold">
-                            {date.getDate()}
-                          </span>
-                        </button>
-                      );
-                    })}
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setWindowStart((current) => Math.max(0, current - 1))
+                      }
+                      className="px-3 py-2 rounded-lg border border-stone-gray text-main"
+                      aria-label="Ver dias anteriores"
+                    >
+                      ‹
+                    </button>
+                    <div className="flex items-center gap-2">
+                      {visibleDates.map((date, index) => {
+                        const absoluteIndex = windowStart + index;
+                        const isToday = absoluteIndex === 0;
+                        return (
+                          <button
+                            key={date.toISOString()}
+                            type="button"
+                            onClick={() => setSelectedDateIndex(absoluteIndex)}
+                            className={`min-w-[56px] py-2 rounded-xl text-center text-base font-semibold border transition ${
+                              selectedDateIndex === absoluteIndex
+                                ? "bg-forest-green text-snow-white border-forest-green"
+                                : "bg-snow-white text-main border-transparent"
+                            }`}
+                          >
+                            <span className="block">
+                              {isToday ? "Hoy" : WEEKDAY_LABELS[date.getDay()]}
+                            </span>
+                            <span className="text-lg font-bold">
+                              {date.getDate()}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setWindowStart((current) =>
+                          Math.min(
+                            Math.max(0, allDates.length - visibleCount),
+                            current + 1
+                          )
+                        )
+                      }
+                      className="px-3 py-2 rounded-lg border border-stone-gray text-main"
+                      aria-label="Ver mas dias"
+                    >
+                      ›
+                    </button>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setWindowStart((current) =>
-                        Math.min(allDates.length - 7, current + 1)
-                      )
-                    }
-                    className="px-3 py-2 rounded-lg border border-stone-gray text-main"
-                    aria-label="Ver mas dias"
-                  >
-                    ›
-                  </button>
                 </div>
               </div>
             </div>
@@ -845,21 +842,22 @@ export default function Reservas() {
                 selectedCampus={selectedCampus}
                 selectedDate={selectedDate}
                 selectedCourtId={selectedCourtId}
+                selectedCourtSlots={selectedCourtSlots}
+                selectedSlots={selectedSlots}
+                selectionMessage={selectionMessage}
                 onSelectCourt={setSelectedCourtId}
+                onToggleSlot={handleSlotToggle}
               />
             )}
           </section>
 
-          <div className="order-3 md:order-3 h-auto md:h-full">
+          <div className="order-3 md:order-3 h-auto md:sticky md:top-0 self-start">
             <CourtDetails
               selectedCourt={selectedCourt}
               selectedCampus={selectedCampus}
               selectedDate={selectedDate}
-              selectedCourtSlots={selectedCourtSlots}
               selectedSlots={selectedSlots}
-              selectionMessage={selectionMessage}
               totalPrice={totalPrice}
-              onToggleSlot={handleSlotToggle}
             />
           </div>
             </div>

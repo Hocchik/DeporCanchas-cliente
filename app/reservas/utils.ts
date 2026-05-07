@@ -39,6 +39,20 @@ export const formatTimeLabel = (time24: string) => {
   return `${hours12}:${minutes.toString().padStart(2, "0")} ${period}`;
 };
 
+export const formatTimeRange24 = (time24: string) => {
+  const [hours, minutes] = time24.split(":").map(Number);
+  const endMinutes = hours * 60 + minutes + 60;
+  const endHours = Math.floor(endMinutes / 60) % 24;
+  const endMins = endMinutes % 60;
+  const startLabel = `${hours.toString().padStart(2, "0")}:${minutes
+    .toString()
+    .padStart(2, "0")}`;
+  const endLabel = `${endHours.toString().padStart(2, "0")}:${endMins
+    .toString()
+    .padStart(2, "0")}`;
+  return `${startLabel} - ${endLabel}`;
+};
+
 export const getStatusForCourt = (court: Court, date: Date): CourtTimeSlot[] => {
   const dateKey = toDateKey(date);
   const dayKey = String(date.getDay());

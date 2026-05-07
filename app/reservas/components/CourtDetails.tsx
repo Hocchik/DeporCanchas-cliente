@@ -1,31 +1,25 @@
-import type { Campus, Court, CourtTimeSlot } from "../types";
-import { formatTimeLabel, LEGEND_COLORS } from "../utils";
+import type { Campus, Court } from "../types";
+import { formatTimeRange24 } from "../utils";
 
 type CourtDetailsProps = {
   selectedCourt?: Court;
   selectedCampus?: Campus;
   selectedDate?: Date;
-  selectedCourtSlots: CourtTimeSlot[];
   selectedSlots: string[];
-  selectionMessage: string;
   totalPrice: number;
-  onToggleSlot: (time: string) => void;
 };
 
 export default function CourtDetails({
   selectedCourt,
   selectedCampus,
   selectedDate,
-  selectedCourtSlots,
   selectedSlots,
-  selectionMessage,
   totalPrice,
-  onToggleSlot,
 }: CourtDetailsProps) {
   if (!selectedCourt) {
     return (
       <aside className="bg-snow-white p-5 shadow-sm h-full text-base">
-          <h2 className="text-xl font-semibold text-main mb-4">
+        <h2 className="text-xl font-semibold text-main mb-4">
           Detalles de cancha
         </h2>
         <p className="text-base text-main">
@@ -37,12 +31,12 @@ export default function CourtDetails({
 
   return (
     <aside className="bg-snow-white p-5 shadow-sm h-full text-base">
-        <h2 className="text-xl font-semibold text-main mb-4 mt-5">
+      <h2 className="text-xl font-semibold text-main mb-4 mt-5">
         Detalles de cancha
       </h2>
       <div className="space-y-4">
         <div>
-            <p className="text-lg font-semibold text-forest-green">
+          <p className="text-lg font-semibold text-forest-green">
             {selectedCourt.name}
           </p>
           <p className="text-base text-main">
@@ -54,53 +48,23 @@ export default function CourtDetails({
         </div>
 
         <div>
-          <p className="text-base text-main mb-2">Horarios disponibles (1h)</p>
-          <div className="grid grid-cols-2 gap-2">
-            {selectedCourtSlots.map((slot) => {
-              const isSelected = selectedSlots.includes(slot.time);
-              const isFree = slot.status === "free";
-              const isBlocked = slot.status === "blocked";
-              const isOccupied = slot.status === "occupied";
-
-              let backgroundColor = LEGEND_COLORS[slot.status];
-              let borderColor = "transparent";
-              let textColor = isBlocked ? "#F7F7F7" : "#0A3D2E";
-
-              if (isFree) {
-                borderColor = isSelected ? "#0A3D2E" : "#E2E8F0";
-                if (isSelected) {
-                  backgroundColor = "#0A3D2E";
-                  textColor = "#FFFFFF";
-                }
-              }
-
-              if (isOccupied) {
-                backgroundColor = "#FEE2E2";
-                borderColor = "#FCA5A5";
-                textColor = "#DC2626";
-              }
-
-              return (
-                <button
-                  key={slot.time}
-                  type="button"
-                  onClick={() => onToggleSlot(slot.time)}
-                  className="px-2 py-2 rounded-md text-base font-semibold border transition"
-                  style={{
-                    backgroundColor,
-                    color: textColor,
-                    borderColor,
-                    opacity: isFree ? 1 : 0.85,
-                  }}
-                  disabled={!isFree}
+          <p className="text-base text-main mb-2">Horarios seleccionados</p>
+          {selectedSlots.length ? (
+            <div className="flex flex-wrap gap-2">
+              {selectedSlots.map((slot) => (
+                <span
+                  key={slot}
+                  className="rounded-full bg-grass-green px-3 py-1 text-base font-semibold text-forest-green"
                 >
-                  {isOccupied
-                    ? `× ${formatTimeLabel(slot.time)}`
-                    : formatTimeLabel(slot.time)}
-                </button>
-              );
-            })}
-          </div>
+                  {formatTimeRange24(slot)}
+                </span>
+              ))}
+            </div>
+          ) : (
+            <p className="text-base text-main">
+              Aun no seleccionas horarios.
+            </p>
+          )}
         </div>
 
         <div className="rounded-xl bg-stone-gray px-3 py-3 text-base text-main">
@@ -109,11 +73,6 @@ export default function CourtDetails({
             Puedes elegir 1 hora o 2 horas consecutivas. Si una hora esta
             bloqueada u ocupada, no podras saltarla.
           </p>
-          {selectionMessage && (
-            <p className="mt-2 text-forest-green font-semibold">
-              {selectionMessage}
-            </p>
-          )}
         </div>
 
         <div className="flex items-center justify-between border-t border-stone-gray pt-4">

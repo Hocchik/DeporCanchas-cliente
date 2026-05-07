@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useEffect, useState } from "react";
 import { createClient } from "../../lib/supabase/client";
 
@@ -77,12 +79,17 @@ export default function SedesGrid() {
     fetchData();
   }, []);
 
-export default function SedesGrid() {
   return (
     <section id="sedes" className="bg-snow-white py-16 mt-16">
       <div className="max-w-6xl mx-auto px-4">
         <h2 className="text-3xl font-bold text-forest-green mb-2">Nuestras Sedes</h2>
         <div className="h-1 w-16 bg-forest-green rounded mb-8"></div>
+        {loading && (
+          <p className="text-main">Cargando sedes...</p>
+        )}
+        {!loading && error && (
+          <p className="text-red-600">{error}</p>
+        )}
         <div className="grid md:grid-cols-3 gap-8">
           {sedes.map((sede) => (
             <div key={sede.nombre} className="bg-snow-white border border-stone-gray rounded-xl shadow-sm p-6 flex flex-col hover:shadow-lg transition">
