@@ -13,6 +13,10 @@ import Footer from "../components/Footer";
 import CourtsList from "./components/CourtsList";
 import CourtsMap from "./components/CourtsMap";
 import CourtDetails from "./components/CourtDetails";
+import CampusSidebar from "./components/CampusSidebar";
+import CampusMobileMenu from "./components/CampusMobileMenu";
+import FilterBar from "./components/FilterBar";
+import ViewModeToggle from "./components/ViewModeToggle";
 import type { Court, CourtType, ReservasData } from "./types";
 import { SLOT_TIMES, WEEKDAY_LABELS, getStatusForCourt } from "./utils";
 import { createClient } from "../../lib/supabase/client";
@@ -603,85 +607,22 @@ export default function Reservas() {
               <span className="text-lg">≡</span>
               Seleccionar sede
             </button>
-
-            {isCampusMenuOpen && (
-              <div className="fixed inset-0 z-40 md:hidden">
-                <div
-                  className="absolute inset-0 bg-black/40"
-                  onClick={() => setIsCampusMenuOpen(false)}
-                />
-                <div className="relative mx-auto mt-16 w-[90%] max-w-sm rounded-2xl bg-snow-white p-5 shadow-xl">
-                  <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-xl font-semibold text-forest-green">
-                      Nuestros Campus
-                    </h2>
-                    <button
-                      type="button"
-                      onClick={() => setIsCampusMenuOpen(false)}
-                      className="rounded-full border border-stone-gray px-3 py-1 text-base"
-                      aria-label="Cerrar menu de sedes"
-                    >
-                      ×
-                    </button>
-                  </div>
-                  <p className="text-base text-main mb-3">
-                    Selecciona tu campus preferido
-                  </p>
-                  <div className="space-y-2">
-                    {campuses.map((campus) => (
-                      <button
-                        key={campus.id}
-                        type="button"
-                        onClick={() => {
-                          setSelectedCampusId(campus.id);
-                          setIsCampusMenuOpen(false);
-                        }}
-                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition ${
-                          selectedCampusId === campus.id
-                            ? "bg-grass-green text-forest-green"
-                            : "text-main hover:bg-stone-gray"
-                        }`}
-                      >
-                        <span className="text-base font-semibold">
-                          {campus.name}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
+            <CampusMobileMenu
+              campuses={campuses}
+              selectedCampusId={selectedCampusId}
+              isOpen={isCampusMenuOpen}
+              onClose={() => setIsCampusMenuOpen(false)}
+              onSelect={setSelectedCampusId}
+            />
 
             <div className="grid grid-cols-1 gap-6 items-start md:items-start md:grid-cols-[260px_minmax(0,1fr)_320px]">
-          <aside
-            className="order-1 hidden h-auto shadow-sm md:order-1 md:block p-5 md:sticky md:top-0 self-start"
-            style={{ backgroundColor: "#F7FAFC" }}
-          >
-            <div className="mb-4">
-              <h2 className="text-xl font-semibold text-forest-green mt-5">
-                Nuestros Campus
-              </h2>
-              <p className="text-base text-main">Selecciona tu campus preferido</p>
-            </div>
-            <div className="space-y-2">
-              {campuses.map((campus) => (
-                <button
-                  key={campus.id}
-                  type="button"
-                  onClick={() => setSelectedCampusId(campus.id)}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition ${
-                    selectedCampusId === campus.id
-                      ? "bg-grass-green text-forest-green"
-                      : "text-main hover:bg-snow-white"
-                  }`}
-                >
-                  <span className="text-base font-semibold">{campus.name}</span>
-                </button>
-              ))}
-            </div>
-          </aside>
+              <CampusSidebar
+                campuses={campuses}
+                selectedCampusId={selectedCampusId}
+                onSelect={setSelectedCampusId}
+              />
 
-          <section className="order-2 md:order-2 space-y-5 pt-4 md:pt-8">
+          <section className="order-2 md:order-2 space-y-5 pt-4 pb-8 md:pt-8">
             <div>
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <div>
@@ -689,149 +630,19 @@ export default function Reservas() {
                     {selectedCampus?.name ?? "Sede"}
                   </h2>
                 </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setViewMode("list")}
-                    aria-label="Ver listado"
-                    className={`relative overflow-hidden px-4 py-2 rounded-lg border transition ${
-                      viewMode === "list"
-                        ? "border-forest-green"
-                        : "border-stone-gray"
-                    }`}
-                  >
-                    <span
-                      className={`absolute inset-0 bg-snow-white transition duration-200 ${
-                        viewMode === "list"
-                          ? "opacity-100 scale-100"
-                          : "opacity-0 scale-95"
-                      }`}
-                    />
-                    <QueueListIcon
-                      className={`relative z-10 w-5 h-5 transition ${
-                        viewMode === "list"
-                          ? "text-forest-green"
-                          : "text-main"
-                      }`}
-                    />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setViewMode("map")}
-                    aria-label="Ver croquis"
-                    className={`relative overflow-hidden px-4 py-2 rounded-lg border transition ${
-                      viewMode === "map"
-                        ? "border-forest-green"
-                        : "border-stone-gray"
-                    }`}
-                  >
-                    <span
-                      className={`absolute inset-0 bg-snow-white transition duration-200 ${
-                        viewMode === "map"
-                          ? "opacity-100 scale-100"
-                          : "opacity-0 scale-95"
-                      }`}
-                    />
-                    <MapIcon
-                      className={`relative z-10 w-5 h-5 transition ${
-                        viewMode === "map"
-                          ? "text-forest-green"
-                          : "text-main"
-                      }`}
-                    />
-                  </button>
-                </div>
+                <ViewModeToggle viewMode={viewMode} setViewMode={setViewMode} />
               </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                <div className="bg-snow-white rounded-2xl p-4 shadow-sm">
-                  <p className="text-base font-semibold text-main mb-3">
-                    Filtrar canchas
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    {[
-                      { id: "all", label: "Todos", icon: SparklesIcon },
-                      { id: "futbol", label: "Futbol", icon: TrophyIcon },
-                      { id: "tenis", label: "Tenis", icon: BoltIcon },
-                      { id: "padel", label: "Padel", icon: QueueListIcon },
-                    ].map((option) => (
-                      <button
-                        key={option.id}
-                        type="button"
-                        onClick={() =>
-                          setSelectedSport(option.id as "all" | CourtType)
-                        }
-                        className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-sm font-semibold border transition ${
-                          selectedSport === option.id
-                            ? "bg-forest-green text-snow-white border-forest-green"
-                            : "bg-transparent text-main border-stone-gray hover:border-forest-green"
-                        }`}
-                      >
-                        <option.icon className="w-3.5 h-3.5" />
-                        {option.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="bg-snow-white rounded-2xl p-4 shadow-sm">
-                  <p className="text-base font-semibold text-main mb-3">
-                    Selecciona fecha
-                  </p>
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setWindowStart((current) => Math.max(0, current - 1))
-                      }
-                      className="px-3 py-2 rounded-lg border border-stone-gray text-main"
-                      aria-label="Ver dias anteriores"
-                    >
-                      ‹
-                    </button>
-                    <div className="flex items-center gap-2">
-                      {visibleDates.map((date, index) => {
-                        const absoluteIndex = windowStart + index;
-                        const isToday = absoluteIndex === 0;
-                        return (
-                          <button
-                            key={date.toISOString()}
-                            type="button"
-                            onClick={() => setSelectedDateIndex(absoluteIndex)}
-                            className={`min-w-[56px] py-2 rounded-xl text-center text-base font-semibold border transition ${
-                              selectedDateIndex === absoluteIndex
-                                ? "bg-forest-green text-snow-white border-forest-green"
-                                : "bg-snow-white text-main border-transparent"
-                            }`}
-                          >
-                            <span className="block">
-                              {isToday ? "Hoy" : WEEKDAY_LABELS[date.getDay()]}
-                            </span>
-                            <span className="text-lg font-bold">
-                              {date.getDate()}
-                            </span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setWindowStart((current) =>
-                          Math.min(
-                            Math.max(0, allDates.length - visibleCount),
-                            current + 1
-                          )
-                        )
-                      }
-                      className="px-3 py-2 rounded-lg border border-stone-gray text-main"
-                      aria-label="Ver mas dias"
-                    >
-                      ›
-                    </button>
-                  </div>
-                </div>
-              </div>
+              <FilterBar
+                selectedSport={selectedSport}
+                setSelectedSport={setSelectedSport}
+                visibleDates={visibleDates}
+                selectedDateIndex={selectedDateIndex}
+                setSelectedDateIndex={setSelectedDateIndex}
+                windowStart={windowStart}
+                setWindowStart={setWindowStart}
+                allDates={allDates}
+                visibleCount={visibleCount}
+              />
             </div>
 
             {viewMode === "map" ? (
