@@ -7,6 +7,15 @@ type CourtDetailsProps = {
   selectedDate?: Date;
   selectedSlots: string[];
   totalPrice: number;
+  onConfirm?: (payload: {
+    campusName?: string;
+    campusAddress?: string;
+    courtName?: string;
+    courtImage?: string;
+    date?: Date;
+    slots: string[];
+    total: number;
+  }) => void;
 };
 
 export default function CourtDetails({
@@ -15,7 +24,23 @@ export default function CourtDetails({
   selectedDate,
   selectedSlots,
   totalPrice,
+  onConfirm,
 }: CourtDetailsProps) {
+  const isDisabled = selectedSlots.length === 0 || !selectedCourt;
+
+  const handleConfirm = () => {
+    if (isDisabled) return;
+    onConfirm?.({
+      campusName: selectedCampus?.name,
+      campusAddress: selectedCampus?.address,
+      courtName: selectedCourt?.name,
+      courtImage: selectedCourt?.image,
+      date: selectedDate,
+      slots: selectedSlots,
+      total: totalPrice,
+    });
+  };
+
   if (!selectedCourt) {
     return (
       <aside className="bg-snow-white p-5 shadow-sm h-full text-base">
@@ -84,8 +109,9 @@ export default function CourtDetails({
 
         <button
           type="button"
-          className="w-full bg-forest-green text-snow-white py-3 rounded-xl font-semibold shadow hover:bg-main transition"
-          disabled={selectedSlots.length === 0}
+          className="w-full bg-forest-green text-snow-white py-3 rounded-xl font-semibold shadow hover:bg-main transition disabled:opacity-50 disabled:cursor-not-allowed"
+          disabled={isDisabled}
+          onClick={handleConfirm}
         >
           Confirmar horarios
         </button>

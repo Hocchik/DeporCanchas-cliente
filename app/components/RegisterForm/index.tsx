@@ -4,7 +4,13 @@ import { ArrowRightIcon, UserIcon, EnvelopeIcon, LockClosedIcon, EyeIcon, EyeSla
 import { useRegister } from "./useRegister";
 import "../../styles/colors.css";
 
-export default function RegisterForm() {
+export default function RegisterForm({
+  onRegister,
+  redirectTo,
+}: {
+  onRegister?: (user: any, session: any) => void;
+  redirectTo?: string | null;
+} = {}) {
   const {
     nombre, setNombre,
     celular, setCelular,
@@ -13,7 +19,7 @@ export default function RegisterForm() {
     showPassword, setShowPassword,
     fieldErrors, setFieldErrors,
     handleSubmit
-  } = useRegister();
+  } = useRegister({ onRegister, redirectTo });
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4" autoComplete="off">

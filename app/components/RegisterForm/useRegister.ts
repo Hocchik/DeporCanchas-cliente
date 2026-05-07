@@ -5,7 +5,12 @@ import { useRouter } from "next/navigation";
 import { useToast } from "../../contexts/ToastContext";
 import { useLoader } from "../../contexts/LoaderContext";
 
-export function useRegister() {
+type RegisterOptions = {
+  onRegister?: (user: any, session: any) => void;
+  redirectTo?: string | null;
+};
+
+export function useRegister(options?: RegisterOptions) {
   const [nombre, setNombre] = useState("");
   const [celular, setCelular] = useState("");
   const [email, setEmail] = useState("");
@@ -21,6 +26,8 @@ export function useRegister() {
 
   const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
+  const redirectTo =
+    options?.redirectTo === undefined ? "/" : options.redirectTo;
   const { showToast } = useToast();
   const { showLoader, hideLoader } = useLoader();
 
@@ -108,7 +115,12 @@ export function useRegister() {
 
     hideLoader();
     showToast("¡Registro exitoso!", "success");
-    router.push("/");
+    if (options?.onRegister) {
+      options.onRegister(data.user, data.session);
+    }
+    if (redirectTo) {
+      router.push(redirectTo);
+    }
   };
 
   return {

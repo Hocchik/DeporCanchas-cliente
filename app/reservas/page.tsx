@@ -1,13 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import {
-  MapIcon,
-  QueueListIcon,
-  SparklesIcon,
-  TrophyIcon,
-  BoltIcon,
-} from "@heroicons/react/24/solid";
+import { useRouter } from "next/navigation";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import CourtsList from "./components/CourtsList";
@@ -17,8 +11,10 @@ import CampusSidebar from "./components/CampusSidebar";
 import CampusMobileMenu from "./components/CampusMobileMenu";
 import FilterBar from "./components/FilterBar";
 import ViewModeToggle from "./components/ViewModeToggle";
+import LoginForm from "../components/LoginForm";
+import RegisterForm from "../components/RegisterForm";
 import type { Court, CourtType, ReservasData } from "./types";
-import { SLOT_TIMES, WEEKDAY_LABELS, getStatusForCourt } from "./utils";
+import { SLOT_TIMES, getStatusForCourt } from "./utils";
 import { createClient } from "../../lib/supabase/client";
 import "../styles/colors.css";
 
@@ -243,6 +239,8 @@ const buildAvailabilityForCourt = (
 };
 
 export default function Reservas() {
+  const router = useRouter();
+  const supabase = useMemo(() => createClient(), []);
   const [campuses, setCampuses] = useState<ReservasData["campuses"]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
@@ -257,6 +255,18 @@ export default function Reservas() {
   const [selectedSlots, setSelectedSlots] = useState<string[]>([]);
   const [selectionMessage, setSelectionMessage] = useState("");
   const [isCampusMenuOpen, setIsCampusMenuOpen] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [authTab, setAuthTab] = useState<"login" | "register">("login");
+  const [pendingReservation, setPendingReservation] = useState<{
+    campusName?: string;
+    campusAddress?: string;
+    courtName?: string;
+    courtImage?: string;
+    date?: string;
+    slots: string[];
+    total: number;
+  } | null>(null);
+  const [isAuthed, setIsAuthed] = useState(false);
   const [baseTariffs, setBaseTariffs] = useState<BaseTariffs>({
     futbol7: 0,
     futbol11: 0,
@@ -328,7 +338,6 @@ export default function Reservas() {
 
   useEffect(() => {
     let isMounted = true;
-    const supabase = createClient();
 
     const loadReservasData = async () => {
       try {
@@ -508,7 +517,39 @@ export default function Reservas() {
     return () => {
       isMounted = false;
     };
-  }, [allDates]);
+  }, [allDates, supabase]);
+
+  useEffect(() => {
+    let isMounted = true;
+    const checkSession = async () => {
+      const { data } = await supabase.auth.getSession();
+      if (!isMounted) return;
+      setIsAuthed(Boolean(data.session));
+    };
+
+    checkSession();
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      const authed = Boolean(session);
+      setIsAuthed(authed);
+      if (authed && pendingReservation) {
+        sessionStorage.setItem(
+          "reservationPayment",
+          JSON.stringify(pendingReservation)
+        );
+        setPendingReservation(null);
+        setShowAuthModal(false);
+        router.push("/reservas/pago");
+      }
+    });
+
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
+  }, [pendingReservation, router, supabase]);
 
   useEffect(() => {
     if (selectedDateIndex < windowStart) {
@@ -571,6 +612,35 @@ export default function Reservas() {
     ? selectedSlots.length * selectedCourt.pricePerHour
     : 0;
 
+  const handleConfirmReservation = async (payload: {
+    campusName?: string;
+    campusAddress?: string;
+    courtName?: string;
+    courtImage?: string;
+    date?: Date;
+    slots: string[];
+    total: number;
+  }) => {
+    const reservation = {
+      campusName: payload.campusName,
+      campusAddress: payload.campusAddress,
+      courtName: payload.courtName,
+      courtImage: payload.courtImage,
+      date: payload.date ? payload.date.toISOString() : undefined,
+      slots: payload.slots,
+      total: payload.total,
+    };
+
+    const { data } = await supabase.auth.getSession();
+    if (data.session) {
+      sessionStorage.setItem("reservationPayment", JSON.stringify(reservation));
+      router.push("/reservas/pago");
+    } else {
+      setPendingReservation(reservation);
+      setShowAuthModal(true);
+    }
+  };
+
     
   return (
     <main
@@ -583,6 +653,82 @@ export default function Reservas() {
       }
     >
       <Navbar />
+      {showAuthModal && !isAuthed && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <div className="w-full max-w-2xl rounded-2xl bg-snow-white p-6 shadow-xl">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h2 className="text-xl font-semibold text-main">
+                  Inicia sesion para continuar
+                </h2>
+                <p className="text-sm text-main">
+                  Necesitas una cuenta activa para reservar y pagar.
+                </p>
+              </div>
+              <button
+                type="button"
+                className="text-2xl text-main"
+                onClick={() => {
+                  setShowAuthModal(false);
+                  setPendingReservation(null);
+                }}
+                aria-label="Cerrar"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="mt-5 inline-flex rounded-full bg-stone-gray p-1">
+              <button
+                type="button"
+                onClick={() => setAuthTab("login")}
+                className={`px-4 py-2 text-sm font-semibold rounded-full transition border ${
+                  authTab === "login"
+                    ? "bg-snow-white text-main border-stone-gray"
+                    : "text-main border-transparent opacity-70"
+                }`}
+              >
+                Iniciar sesion
+              </button>
+              <button
+                type="button"
+                onClick={() => setAuthTab("register")}
+                className={`px-4 py-2 text-sm font-semibold rounded-full transition border ${
+                  authTab === "register"
+                    ? "bg-snow-white text-main border-stone-gray"
+                    : "text-main border-transparent opacity-70"
+                }`}
+              >
+                Registrarse
+              </button>
+            </div>
+
+            <div className="mt-6">
+              {authTab === "login" ? (
+                <LoginForm
+                  onLogin={() => {
+                    setShowAuthModal(false);
+                    setIsAuthed(true);
+                  }}
+                  redirectTo={null}
+                />
+              ) : (
+                <RegisterForm
+                  onRegister={(_user, session) => {
+                    if (session) {
+                      setShowAuthModal(false);
+                      setIsAuthed(true);
+                    } else {
+                      setAuthTab("login");
+                    }
+                  }}
+                  redirectTo={null}
+                />
+              )}
+            </div>
+          </div>
+        </div>
+      )}
       <div className="w-full px-4 py-4 md:px-0 md:py-0">
         {isLoading ? (
           <div className="bg-snow-white rounded-2xl p-6 text-base text-main">
@@ -669,6 +815,7 @@ export default function Reservas() {
               selectedDate={selectedDate}
               selectedSlots={selectedSlots}
               totalPrice={totalPrice}
+              onConfirm={handleConfirmReservation}
             />
           </div>
             </div>

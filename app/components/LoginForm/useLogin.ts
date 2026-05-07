@@ -5,7 +5,12 @@ import { useRouter } from "next/navigation";
 import { useToast } from "../../contexts/ToastContext";
 import { useLoader } from "../../contexts/LoaderContext";
 
-export function useLogin(onLogin?: (user: any) => void) {
+type LoginOptions = {
+  onLogin?: (user: any) => void;
+  redirectTo?: string | null;
+};
+
+export function useLogin(options?: LoginOptions) {
   const [email, setEmail] = useState("");
   const [clave, setClave] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -23,6 +28,8 @@ export function useLogin(onLogin?: (user: any) => void) {
     [keepLogged]
   );
   const router = useRouter();
+  const redirectTo =
+    options?.redirectTo === undefined ? "/" : options.redirectTo;
   const { showToast } = useToast();
   const { showLoader, hideLoader } = useLoader();
 
@@ -88,10 +95,12 @@ export function useLogin(onLogin?: (user: any) => void) {
       return;
     }
 
-    if (onLogin) onLogin(data.user);
+    if (options?.onLogin) options.onLogin(data.user);
     hideLoader();
     showToast("¡Bienvenido de nuevo!", "success");
-    router.push("/");
+    if (redirectTo) {
+      router.push(redirectTo);
+    }
   };
 
   return {

@@ -4,7 +4,13 @@ import { EnvelopeIcon, LockClosedIcon, EyeIcon, EyeSlashIcon } from '@heroicons/
 import { useLogin } from "./useLogin";
 import "../../styles/colors.css";
 
-export default function LoginForm({ onLogin }: { onLogin?: (user: any) => void }) {
+export default function LoginForm({
+  onLogin,
+  redirectTo,
+}: {
+  onLogin?: (user: any) => void;
+  redirectTo?: string | null;
+}) {
   const {
     email, setEmail,
     clave, setClave,
@@ -13,7 +19,7 @@ export default function LoginForm({ onLogin }: { onLogin?: (user: any) => void }
     alreadyLoggedIn, currentEmail,
     fieldErrors, setFieldErrors,
     handleSubmit
-  } = useLogin(onLogin);
+  } = useLogin({ onLogin, redirectTo });
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4" autoComplete="off">
