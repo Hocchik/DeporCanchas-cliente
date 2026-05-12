@@ -1,33 +1,15 @@
 "use client";
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import '../styles/colors.css';
 import { UserCircleIcon } from '@heroicons/react/24/solid';
-import { createClient } from '../../lib/supabase/client';
+import { useSession } from '../contexts/SessionContext';
 
 const Navbar = () => {
-  const supabase = useMemo(() => createClient(), []);
-  const [user, setUser] = useState<any | null>(null);
+  const { user, logout } = useSession();
+  const router = useRouter();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    let isMounted = true;
-
-    supabase.auth.getSession().then(({ data }) => {
-      if (!isMounted) return;
-      setUser(data.session?.user ?? null);
-    });
-
-    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (!isMounted) return;
-      setUser(session?.user ?? null);
-    });
-
-    return () => {
-      isMounted = false;
-      authListener.subscription.unsubscribe();
-    };
-  }, [supabase]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -53,15 +35,12 @@ const Navbar = () => {
   }, []);
 
   const isLoggedIn = Boolean(user);
-  const displayName =
-    user?.user_metadata?.nombre || user?.email?.split("@")[0] || "Cuenta";
+  const displayName = user?.nombre?.split(" ")[0] || user?.email?.split("@")[0] || "Cuenta";
 
   const handleSignOut = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (!error) {
-      setUser(null);
-    }
+    await logout();
     setIsMenuOpen(false);
+    router.push("/");
   };
 
   return (
@@ -104,20 +83,28 @@ const Navbar = () => {
                   role="menu"
                 >
                   <a
-                    href="/configuracion"
-                    className="block w-full text-left px-3 py-2 rounded text-sm text-main hover:bg-grass-green hover:text-snow-white hover:scale-105 transform transition duration-150 ease-in-out active:scale-95 focus:outline-none focus:ring-2 focus:ring-forest-green cursor-pointer"
+                    href="/mis-reservas"
+                    className="block w-full text-left px-3 py-2 rounded text-sm text-main hover:bg-grass-green hover:text-snow-white transform transition duration-150 ease-in-out focus:outline-none focus:ring-2 focus:ring-forest-green cursor-pointer"
                     role="menuitem"
                     onClick={() => setIsMenuOpen(false)}
                   >
-                    Configuracion
+                    Mis reservas
+                  </a>
+                  <a
+                    href="/perfil"
+                    className="block w-full text-left px-3 py-2 rounded text-sm text-main hover:bg-grass-green hover:text-snow-white transform transition duration-150 ease-in-out focus:outline-none focus:ring-2 focus:ring-forest-green cursor-pointer"
+                    role="menuitem"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    Mi perfil
                   </a>
                   <button
                     type="button"
-                    className="block w-full text-left px-3 py-2 rounded text-sm text-red-600 hover:bg-red-100 hover:text-red-700 hover:scale-105 transform transition duration-150 ease-in-out active:scale-95 focus:outline-none focus:ring-2 focus:ring-red-300 cursor-pointer"
+                    className="block w-full text-left px-3 py-2 rounded text-sm text-red-600 hover:bg-red-100 hover:text-red-700 transform transition duration-150 ease-in-out focus:outline-none focus:ring-2 focus:ring-red-300 cursor-pointer"
                     role="menuitem"
                     onClick={handleSignOut}
                   >
-                    Cerrar sesion
+                    Cerrar sesión
                   </button>
                 </div>
               )}

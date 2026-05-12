@@ -8,7 +8,7 @@ export default function RegisterForm({
   onRegister,
   redirectTo,
 }: {
-  onRegister?: (user: any, session: any) => void;
+  onRegister?: (user: unknown) => void;
   redirectTo?: string | null;
 } = {}) {
   const {
@@ -74,6 +74,8 @@ export default function RegisterForm({
           <PhoneIcon className="w-6 h-6" style={{ color: '#386641', opacity: 0.6 }} />
           <input
             type="tel"
+            inputMode="numeric"
+            maxLength={9}
             name="registro_celular"
             autoComplete="off"
             className="flex-1 bg-transparent border-none outline-none text-base font-semibold w-full"
@@ -81,7 +83,7 @@ export default function RegisterForm({
             placeholder="987654321"
             value={celular}
             onChange={(e) => {
-              setCelular(e.target.value);
+              setCelular(e.target.value.replace(/\D/g, "").slice(0, 9));
               if (fieldErrors.celular) setFieldErrors(prev => ({ ...prev, celular: undefined }));
             }}
           />

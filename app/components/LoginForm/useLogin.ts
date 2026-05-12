@@ -1,12 +1,13 @@
-import { useEffect, useMemo, useState } from "react";
-import { createClient } from "../../../lib/supabase/client";
-import { mapAuthError } from "../../../lib/authErrors";
+"use client";
+
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useToast } from "../../contexts/ToastContext";
 import { useLoader } from "../../contexts/LoaderContext";
+import { useSession } from "../../contexts/SessionContext";
 
 type LoginOptions = {
-  onLogin?: (user: any) => void;
+  onLogin?: (user: unknown) => void;
   redirectTo?: string | null;
 };
 
@@ -15,39 +16,19 @@ export function useLogin(options?: LoginOptions) {
   const [clave, setClave] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [keepLogged, setKeepLogged] = useState(true);
-  const [alreadyLoggedIn, setAlreadyLoggedIn] = useState(false);
-  const [currentEmail, setCurrentEmail] = useState("");
-  
+
   const [fieldErrors, setFieldErrors] = useState<{
     email?: string;
     clave?: string;
   }>({});
 
-  const supabase = useMemo(
-    () => createClient({ persistSession: keepLogged }),
-    [keepLogged]
-  );
   const router = useRouter();
-  const redirectTo =
-    options?.redirectTo === undefined ? "/" : options.redirectTo;
+  const redirectTo = options?.redirectTo === undefined ? "/" : options.redirectTo;
   const { showToast } = useToast();
   const { showLoader, hideLoader } = useLoader();
-
-  useEffect(() => {
-    let isMounted = true;
-    supabase.auth.getSession().then(({ data }) => {
-      if (!isMounted) return;
-      const sessionEmail = data.session?.user?.email ?? "";
-      if (sessionEmail) {
-        setAlreadyLoggedIn(true);
-        setCurrentEmail(sessionEmail);
-      }
-    });
-
-    return () => {
-      isMounted = false;
-    };
-  }, [supabase]);
+  const { user, refresh } = useSession();
+  const alreadyLoggedIn = Boolean(user);
+  const currentEmail = user?.email ?? "";
 
   const validate = () => {
     const errors: typeof fieldErrors = {};
@@ -82,24 +63,38 @@ export function useLogin(options?: LoginOptions) {
 
     showLoader("Iniciando sesión...");
 
-    const { data, error: signInError } = await supabase.auth.signInWithPassword({
-      email,
-      password: clave,
-    });
+    try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, clave }),
+      });
+      const data = await res.json().catch(() => ({}));
 
-    if (signInError) {
+      if (!res.ok) {
+        hideLoader();
+        const msg =
+          data.error === "credenciales_invalidas"
+            ? "Correo o contraseña incorrectos."
+            : data.error === "too_many_attempts"
+              ? "Demasiados intentos. Intenta en un minuto."
+              : data.error === "validation"
+                ? "Revisa los datos ingresados."
+                : "Error al iniciar sesión.";
+        showToast(msg, "error");
+        return;
+      }
+
+      await refresh();
+      if (options?.onLogin) options.onLogin(data.user);
       hideLoader();
-      const code = (signInError as any).code || signInError.name;
-      const msg = code ? mapAuthError(code) : "Correo o contraseña incorrectos.";
-      showToast(msg, "error");
-      return;
-    }
-
-    if (options?.onLogin) options.onLogin(data.user);
-    hideLoader();
-    showToast("¡Bienvenido de nuevo!", "success");
-    if (redirectTo) {
-      router.push(redirectTo);
+      showToast("¡Bienvenido de nuevo!", "success");
+      if (redirectTo) {
+        router.push(redirectTo);
+      }
+    } catch {
+      hideLoader();
+      showToast("Error de red.", "error");
     }
   };
 

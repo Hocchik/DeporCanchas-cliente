@@ -1,12 +1,13 @@
-import { useMemo, useState } from "react";
-import { createClient } from "../../../lib/supabase/client";
-import { mapAuthError } from "../../../lib/authErrors";
+"use client";
+
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useToast } from "../../contexts/ToastContext";
 import { useLoader } from "../../contexts/LoaderContext";
+import { useSession } from "../../contexts/SessionContext";
 
 type RegisterOptions = {
-  onRegister?: (user: any, session: any) => void;
+  onRegister?: (user: unknown) => void;
   redirectTo?: string | null;
 };
 
@@ -16,7 +17,7 @@ export function useRegister(options?: RegisterOptions) {
   const [email, setEmail] = useState("");
   const [clave, setClave] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  
+
   const [fieldErrors, setFieldErrors] = useState<{
     nombre?: string;
     celular?: string;
@@ -24,19 +25,18 @@ export function useRegister(options?: RegisterOptions) {
     clave?: string;
   }>({});
 
-  const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
-  const redirectTo =
-    options?.redirectTo === undefined ? "/" : options.redirectTo;
+  const redirectTo = options?.redirectTo === undefined ? "/" : options.redirectTo;
   const { showToast } = useToast();
   const { showLoader, hideLoader } = useLoader();
+  const { refresh } = useSession();
 
   const validate = () => {
     const errors: typeof fieldErrors = {};
     let isValid = true;
 
-    if (!nombre.trim()) {
-      errors.nombre = "El nombre es requerido.";
+    if (!nombre.trim() || nombre.trim().length < 3) {
+      errors.nombre = "El nombre debe tener al menos 3 caracteres.";
       isValid = false;
     }
 
@@ -77,49 +77,34 @@ export function useRegister(options?: RegisterOptions) {
 
     showLoader("Creando tu cuenta...");
 
-    const { data, error: signUpError } = await supabase.auth.signUp({
-      email,
-      password: clave,
-      options: {
-        data: {
-          nombre,
-        },
-      },
-    });
+    try {
+      const res = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nombre, email, celular, clave }),
+      });
+      const data = await res.json().catch(() => ({}));
 
-    if (signUpError) {
-      hideLoader();
-      const code = (signUpError as any).code || signUpError.name;
-      const msg = code ? mapAuthError(code) : "No se pudo registrar. Revisa tus datos.";
-      showToast(msg, "error");
-      return;
-    }
-
-    const { error: insertError } = await supabase.from('usuarios').insert([
-      {
-        nombre,
-        email,
-        celular,
-        rol: 'USER'
+      if (!res.ok) {
+        hideLoader();
+        const msg =
+          data.error === "usuario_ya_existe"
+            ? "Ya existe una cuenta con ese email."
+            : data.error === "validation"
+              ? "Revisa los datos ingresados."
+              : "No se pudo registrar. Intenta de nuevo.";
+        showToast(msg, "error");
+        return;
       }
-    ]);
 
-    if (insertError) {
-      console.error("Error al guardar en usuarios:", insertError);
+      await refresh();
       hideLoader();
-      const code = insertError.code;
-      const msg = code ? mapAuthError(code) : "Ocurrió un error al guardar tu información.";
-      showToast(msg, "error");
-      return;
-    }
-
-    hideLoader();
-    showToast("¡Registro exitoso!", "success");
-    if (options?.onRegister) {
-      options.onRegister(data.user, data.session);
-    }
-    if (redirectTo) {
-      router.push(redirectTo);
+      showToast("¡Registro exitoso!", "success");
+      if (options?.onRegister) options.onRegister(data.user);
+      if (redirectTo) router.push(redirectTo);
+    } catch {
+      hideLoader();
+      showToast("Error de red.", "error");
     }
   };
 
