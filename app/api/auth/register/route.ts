@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
   if (!parsed.success) {
     return Response.json({ error: "validation", issues: parsed.error.issues }, { status: 400 });
   }
-  const { nombre, email, dni, celular, clave } = parsed.data;
+  const { nombre, email, celular, clave } = parsed.data;
 
   const supabase = createServiceClient();
 
@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
   const { data: existing } = await supabase
     .from("usuarios")
     .select("id")
-    .or(`email.eq.${email},dni.eq.${dni}`)
+    .eq("email", email)
     .maybeSingle();
   if (existing) {
     return Response.json({ error: "usuario_ya_existe" }, { status: 409 });
@@ -47,7 +47,6 @@ export async function POST(req: NextRequest) {
     .insert({
       nombre,
       email,
-      dni,
       celular: celular || null,
       clave_hash,
       roles_id: rolCliente.id,

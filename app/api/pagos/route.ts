@@ -165,11 +165,14 @@ export async function POST(req: NextRequest) {
   const cancha = reserva.canchas_deportivas;
   const campus = cancha.campus;
 
+  const dniParaVoucher = cardData?.titular_dni ?? user.dni ?? "—";
+  const nombreParaVoucher = (cardData?.titular_nombre ?? user.nombre).toUpperCase();
+
   const png = await generarVoucherPng({
     serie: "EB001",
     correlativo,
-    cliente_nombre: user.nombre.toUpperCase(),
-    cliente_dni: user.dni,
+    cliente_nombre: nombreParaVoucher,
+    cliente_dni: dniParaVoucher,
     fecha: formatFecha(start),
     hora: formatHora12(new Date()),
     descripcion: `${horas}h ${cancha.nombre} - SEDE ${campus.nombre.replace(/^Sede\s+/i, "").toUpperCase()}`,
@@ -189,6 +192,11 @@ export async function POST(req: NextRequest) {
 
   await supabase.from("pagos").update({ voucher_url }).eq("id", pago.id);
   await supabase.from("reservas").update({ estado: "pagada", expires_at: null }).eq("id", reserva.id);
+
+  // Si el user no tenía DNI y pagó con tarjeta, guardar el DNI del titular en su perfil
+  if (cardData && !user.dni) {
+    await supabase.from("usuarios").update({ dni: cardData.titular_dni }).eq("id", user.id);
+  }
 
   // Enviar email (no bloquea respuesta si falla)
   try {

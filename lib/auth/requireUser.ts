@@ -6,7 +6,7 @@ export type AuthenticatedUser = {
   id: number;
   email: string;
   nombre: string;
-  dni: string;
+  dni: string | null;
   celular: string | null;
   roles_id: number;
 };

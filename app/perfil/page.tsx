@@ -90,9 +90,10 @@ export default function PerfilPage() {
               <input type="email" value={datos.email} onChange={(e) => setDatos({ ...datos, email: e.target.value })}
                 className="w-full rounded-xl border border-stone-gray bg-stone-gray/30 px-4 py-3 text-main" />
             </Field>
-            <Field label="DNI (no editable)">
-              <input value={user.dni} disabled
+            <Field label="DNI">
+              <input value={user.dni ?? "(no registrado)"} disabled
                 className="w-full rounded-xl border border-stone-gray bg-stone-gray/10 px-4 py-3 text-main opacity-60" />
+              <p className="text-xs text-main mt-1 opacity-70">El DNI se registra automáticamente cuando pagas con tarjeta.</p>
             </Field>
             <Field label="Celular">
               <input inputMode="numeric" value={datos.celular} onChange={(e) => setDatos({ ...datos, celular: e.target.value.replace(/\D/g, "").slice(0, 9) })}

@@ -1,6 +1,6 @@
 "use client";
 import React from "react";
-import { ArrowRightIcon, UserIcon, EnvelopeIcon, LockClosedIcon, EyeIcon, EyeSlashIcon, PhoneIcon, IdentificationIcon } from '@heroicons/react/24/solid';
+import { ArrowRightIcon, UserIcon, EnvelopeIcon, LockClosedIcon, EyeIcon, EyeSlashIcon, PhoneIcon } from '@heroicons/react/24/solid';
 import { useRegister } from "./useRegister";
 import "../../styles/colors.css";
 
@@ -13,7 +13,6 @@ export default function RegisterForm({
 } = {}) {
   const {
     nombre, setNombre,
-    dni, setDni,
     celular, setCelular,
     email, setEmail,
     clave, setClave,
@@ -44,30 +43,6 @@ export default function RegisterForm({
           />
         </div>
         {fieldErrors.nombre && <p className="text-red-500 text-sm mt-1 ml-2">{fieldErrors.nombre}</p>}
-      </div>
-
-      {/* DNI */}
-      <div>
-        <label className="block mb-1 font-bold text-[1.15rem]" style={{ color: '#386641' }}>DNI</label>
-        <div className={`flex items-center bg-[#efeeed] rounded-xl px-4 py-3 gap-3 border transition-colors ${fieldErrors.dni ? 'border-red-500' : 'border-transparent focus-within:border-[#386641]'}`}>
-          <IdentificationIcon className="w-6 h-6" style={{ color: '#386641', opacity: 0.6 }} />
-          <input
-            type="text"
-            inputMode="numeric"
-            maxLength={8}
-            name="registro_dni"
-            autoComplete="off"
-            className="flex-1 bg-transparent border-none outline-none text-base font-semibold w-full"
-            style={{ color: '#386641' }}
-            placeholder="71849203"
-            value={dni}
-            onChange={(e) => {
-              setDni(e.target.value.replace(/\D/g, "").slice(0, 8));
-              if (fieldErrors.dni) setFieldErrors(prev => ({ ...prev, dni: undefined }));
-            }}
-          />
-        </div>
-        {fieldErrors.dni && <p className="text-red-500 text-sm mt-1 ml-2">{fieldErrors.dni}</p>}
       </div>
 
       {/* Correo electrónico */}
