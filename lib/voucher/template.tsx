@@ -16,10 +16,20 @@ export type VoucherData = {
   reserva_code: string;
 };
 
+// Nota: Satori (motor de @vercel/og) requiere display:flex en todo div con
+// más de un hijo. Para evitar confusiones, usamos template literals en cada
+// div (un solo string como hijo) y display:flex en todos los wrappers.
+
 export function VoucherTemplate(d: VoucherData) {
   const correlativoStr = String(d.correlativo).padStart(8, "0");
   const igv = Number((d.total - d.total / 1.18).toFixed(2));
   const gravado = Number((d.total - igv).toFixed(2));
+
+  const text = (content: string, extra: React.CSSProperties = {}): React.CSSProperties => ({
+    display: "flex",
+    ...extra,
+  });
+  void text;
 
   return (
     <div
@@ -39,30 +49,34 @@ export function VoucherTemplate(d: VoucherData) {
           display: "flex",
           backgroundColor: "#0f2f1f", color: "white", padding: "10px 30px",
           borderRadius: 8, fontSize: 24, fontWeight: 700,
-        }}>DeporCanchas</div>
+        }}>{`DeporCanchas`}</div>
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", fontSize: 11, marginBottom: 12 }}>
-        <div style={{ fontWeight: 700, fontSize: 13 }}>{EMPRESA.nombre}</div>
-        <div>{EMPRESA.direccion}</div>
-        <div>Tel: {EMPRESA.telefono}</div>
-        <div>Correo: {EMPRESA.correo}</div>
-        <div>web: {EMPRESA.web}</div>
+        <div style={{ display: "flex", fontWeight: 700, fontSize: 13 }}>{EMPRESA.nombre}</div>
+        <div style={{ display: "flex" }}>{EMPRESA.direccion}</div>
+        <div style={{ display: "flex" }}>{`Tel: ${EMPRESA.telefono}`}</div>
+        <div style={{ display: "flex" }}>{`Correo: ${EMPRESA.correo}`}</div>
+        <div style={{ display: "flex" }}>{`web: ${EMPRESA.web}`}</div>
       </div>
 
       <div style={{ display: "flex", justifyContent: "center", fontWeight: 700, fontSize: 14, marginBottom: 4 }}>
-        BOLETA DE VENTA ELECTRÓNICA
+        {`BOLETA DE VENTA ELECTRÓNICA`}
       </div>
       <div style={{ display: "flex", justifyContent: "center", fontWeight: 700, fontSize: 13, marginBottom: 12 }}>
-        {d.serie} - {correlativoStr}
+        {`${d.serie} - ${correlativoStr}`}
       </div>
 
-      <div style={{ display: "flex", justifyContent: "center", fontWeight: 700, marginBottom: 2 }}>{d.cliente_nombre}</div>
-      <div style={{ display: "flex", justifyContent: "center", fontSize: 11, marginBottom: 12 }}>DNI: {d.cliente_dni}</div>
+      <div style={{ display: "flex", justifyContent: "center", fontWeight: 700, marginBottom: 2 }}>
+        {d.cliente_nombre}
+      </div>
+      <div style={{ display: "flex", justifyContent: "center", fontSize: 11, marginBottom: 12 }}>
+        {`DNI: ${d.cliente_dni}`}
+      </div>
 
       <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, marginBottom: 8, borderTop: "1px solid #ddd", paddingTop: 8 }}>
-        <div style={{ display: "flex" }}><strong>FECHA:&nbsp;</strong> {d.fecha}</div>
-        <div style={{ display: "flex" }}><strong>HORA:&nbsp;</strong> {d.hora}</div>
+        <div style={{ display: "flex", fontWeight: 700 }}>{`FECHA: ${d.fecha}`}</div>
+        <div style={{ display: "flex", fontWeight: 700 }}>{`HORA: ${d.hora}`}</div>
       </div>
 
       <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, fontWeight: 700, borderTop: "1px solid #ddd", paddingTop: 6 }}>
@@ -72,7 +86,7 @@ export function VoucherTemplate(d: VoucherData) {
         <div style={{ display: "flex", width: "20%", justifyContent: "flex-end" }}>TOTAL</div>
       </div>
       <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, marginTop: 4 }}>
-        <div style={{ display: "flex", width: "30%" }}>{d.horas}h</div>
+        <div style={{ display: "flex", width: "30%" }}>{`${d.horas}h`}</div>
         <div style={{ display: "flex", width: "30%", fontSize: 9 }}>{d.reserva_code}</div>
         <div style={{ display: "flex", width: "20%", justifyContent: "flex-end" }}>{d.total.toFixed(2)}</div>
         <div style={{ display: "flex", width: "20%", justifyContent: "flex-end" }}>{d.total.toFixed(2)}</div>
@@ -81,30 +95,34 @@ export function VoucherTemplate(d: VoucherData) {
 
       <div style={{ display: "flex", flexDirection: "column", borderTop: "1px solid #ddd", marginTop: 10, paddingTop: 8, fontSize: 11 }}>
         <div style={{ display: "flex", justifyContent: "space-between" }}>
-          <span>TOTAL GRAVADO</span><span>(S/) {gravado.toFixed(2)}</span>
+          <div style={{ display: "flex" }}>TOTAL GRAVADO</div>
+          <div style={{ display: "flex" }}>{`(S/) ${gravado.toFixed(2)}`}</div>
         </div>
         <div style={{ display: "flex", justifyContent: "space-between" }}>
-          <span>I.G.V</span><span>(S/) {igv.toFixed(2)}</span>
+          <div style={{ display: "flex" }}>I.G.V</div>
+          <div style={{ display: "flex" }}>{`(S/) ${igv.toFixed(2)}`}</div>
         </div>
         <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 700, fontSize: 16, marginTop: 4 }}>
-          <span>TOTAL</span><span>(S/) {d.total.toFixed(2)}</span>
+          <div style={{ display: "flex" }}>TOTAL</div>
+          <div style={{ display: "flex" }}>{`(S/) ${d.total.toFixed(2)}`}</div>
         </div>
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", fontSize: 10, marginTop: 10 }}>
-        <div style={{ display: "flex" }}><strong>SON:&nbsp;</strong> {numeroALetras(d.total)} SOLES</div>
-        <div style={{ display: "flex" }}><strong>FORMA DE PAGO:&nbsp;</strong> {d.metodo_pago}</div>
-        <div style={{ display: "flex" }}><strong>COND. VENTA:&nbsp;</strong> CONTADO</div>
-        <div style={{ display: "flex", marginTop: 4 }}><strong>Observaciones:</strong></div>
+        <div style={{ display: "flex" }}>{`SON: ${numeroALetras(d.total)} SOLES`}</div>
+        <div style={{ display: "flex" }}>{`FORMA DE PAGO: ${d.metodo_pago}`}</div>
+        <div style={{ display: "flex" }}>{`COND. VENTA: CONTADO`}</div>
+        <div style={{ display: "flex", marginTop: 4 }}>Observaciones:</div>
       </div>
 
       <div style={{ display: "flex", justifyContent: "center", marginTop: 16 }}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={d.qr_data_url} width={120} height={120} alt="QR" />
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", fontSize: 9, marginTop: 12, color: "#555" }}>
-        <div>Representación impresa de la BOLETA DE VENTA ELECTRÓNICA</div>
-        <div>Documento simulado sin validez legal</div>
+        <div style={{ display: "flex" }}>Representación impresa de la BOLETA DE VENTA ELECTRÓNICA</div>
+        <div style={{ display: "flex" }}>Documento simulado sin validez legal</div>
       </div>
     </div>
   );
