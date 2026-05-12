@@ -1,3 +1,4 @@
+import { ArrowRightIcon, CalendarDaysIcon, ClockIcon, MapPinIcon, InformationCircleIcon } from "@heroicons/react/24/solid";
 import type { Campus, Court } from "../types";
 import { formatTimeRange24 } from "../utils";
 
@@ -45,11 +46,12 @@ export default function CourtDetails({
 
   if (!selectedCourt) {
     return (
-      <aside className="bg-snow-white p-5 shadow-sm h-full text-base">
-        <h2 className="text-xl font-semibold text-main mb-4">
-          Detalles de cancha
+      <aside className="card-soft p-5">
+        <p className="text-eyebrow text-brand mb-2">Detalle</p>
+        <h2 className="font-display font-semibold text-lg text-primary mb-2">
+          Sin cancha seleccionada
         </h2>
-        <p className="text-base text-main">
+        <p className="text-sm text-muted">
           No hay canchas disponibles para este filtro.
         </p>
       </aside>
@@ -57,67 +59,72 @@ export default function CourtDetails({
   }
 
   return (
-    <aside className="bg-snow-white p-5 shadow-sm h-full text-base">
-      <h2 className="text-xl font-semibold text-main mb-4 mt-5">
-        Detalles de cancha
+    <aside className="card-soft p-5">
+      <p className="text-eyebrow text-brand mb-2">Tu reserva</p>
+      <h2 className="font-display font-semibold text-lg text-primary">
+        {selectedCourt.name}
       </h2>
-      <div className="space-y-4">
-        <div>
-          <p className="text-lg font-semibold text-forest-green">
-            {selectedCourt.name}
-          </p>
-          <p className="text-base text-main">
-            {selectedCampus?.name} - {selectedCampus?.address}
-          </p>
-          <p className="text-base text-main mt-1">
-            Fecha: {selectedDate?.toLocaleDateString("es-PE")}
-          </p>
-        </div>
 
-        <div>
-          <p className="text-base text-main mb-2">Horarios seleccionados</p>
-          {selectedSlots.length ? (
-            <div className="flex flex-wrap gap-2">
-              {selectedSlots.map((slot) => (
-                <span
-                  key={slot}
-                  className="rounded-full bg-grass-green px-3 py-1 text-base font-semibold text-forest-green"
-                >
-                  {formatTimeRange24(slot)}
-                </span>
-              ))}
-            </div>
-          ) : (
-            <p className="text-base text-main">
-              Aun no seleccionas horarios.
-            </p>
-          )}
-        </div>
-
-        <div className="rounded-xl bg-stone-gray px-3 py-3 text-base text-main">
-          <p className="font-semibold">Ayuda de reserva</p>
-          <p>
-            Puedes elegir 1 hora o 2 horas consecutivas. Si una hora esta
-            bloqueada u ocupada, no podras saltarla.
-          </p>
-        </div>
-
-        <div className="flex items-center justify-between border-t border-stone-gray pt-4">
-          <span className="text-base font-semibold text-main">Total:</span>
-          <span className="text-xl font-bold text-forest-green">
-            S/{totalPrice.toFixed(2)}
-          </span>
-        </div>
-
-        <button
-          type="button"
-          className="w-full bg-forest-green text-snow-white py-3 rounded-xl font-semibold shadow hover:bg-main transition disabled:opacity-50 disabled:cursor-not-allowed"
-          disabled={isDisabled}
-          onClick={handleConfirm}
-        >
-          {submitting ? "Procesando…" : "Confirmar horarios"}
-        </button>
+      <div className="mt-3 space-y-1.5 text-sm">
+        <Row icon={<MapPinIcon className="w-4 h-4" />} text={`${selectedCampus?.name ?? "Sede"} · ${selectedCampus?.address ?? ""}`} />
+        <Row icon={<CalendarDaysIcon className="w-4 h-4" />} text={selectedDate?.toLocaleDateString("es-PE", { weekday: "long", day: "2-digit", month: "long" }) ?? "—"} />
       </div>
+
+      <div className="mt-5">
+        <p className="text-xs font-semibold text-muted uppercase tracking-wider mb-2">
+          Horarios
+        </p>
+        {selectedSlots.length ? (
+          <div className="flex flex-wrap gap-2">
+            {selectedSlots.map((slot) => (
+              <span
+                key={slot}
+                className="inline-flex items-center gap-1 chip chip-strong"
+              >
+                <ClockIcon className="w-3.5 h-3.5" />
+                {formatTimeRange24(slot)}
+              </span>
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm text-muted">
+            Aún no seleccionas horarios.
+          </p>
+        )}
+      </div>
+
+      <div className="mt-5 flex gap-3 rounded-xl bg-brand-soft border border-soft px-3 py-2.5">
+        <InformationCircleIcon className="w-5 h-5 text-brand shrink-0 mt-0.5" />
+        <div className="text-xs text-muted leading-relaxed">
+          <span className="font-semibold text-primary">Tip:</span> puedes elegir 1 hora o 2 horas consecutivas.
+        </div>
+      </div>
+
+      <div className="mt-5 border-t border-soft pt-4 flex items-center justify-between">
+        <span className="text-sm font-semibold text-muted">Total a pagar</span>
+        <span className="text-2xl font-display font-bold text-brand">
+          S/{totalPrice.toFixed(2)}
+        </span>
+      </div>
+
+      <button
+        type="button"
+        className="btn-primary w-full mt-4 disabled:opacity-50 disabled:cursor-not-allowed"
+        disabled={isDisabled}
+        onClick={handleConfirm}
+      >
+        {submitting ? "Procesando…" : "Continuar al pago"}
+        {!submitting && <ArrowRightIcon className="w-4 h-4" />}
+      </button>
     </aside>
+  );
+}
+
+function Row({ icon, text }: { icon: React.ReactNode; text: string }) {
+  return (
+    <div className="flex items-center gap-2 text-muted">
+      <span className="text-brand opacity-70">{icon}</span>
+      <span className="truncate">{text}</span>
+    </div>
   );
 }

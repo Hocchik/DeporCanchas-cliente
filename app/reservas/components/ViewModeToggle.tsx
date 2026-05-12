@@ -8,45 +8,35 @@ interface ViewModeToggleProps {
 
 export default function ViewModeToggle({ viewMode, setViewMode }: ViewModeToggleProps) {
   return (
-    <div className="flex items-center gap-2">
-      <button
-        type="button"
-        onClick={() => setViewMode("list")}
-        aria-label="Ver listado"
-        className={`relative overflow-hidden px-4 py-2 rounded-lg border transition ${
-          viewMode === "list" ? "border-forest-green" : "border-stone-gray"
-        }`}
-      >
-        <span
-          className={`absolute inset-0 bg-snow-white transition duration-200 ${
-            viewMode === "list" ? "opacity-100 scale-100" : "opacity-0 scale-95"
-          }`}
-        />
-        <QueueListIcon
-          className={`relative z-10 w-5 h-5 transition ${
-            viewMode === "list" ? "text-forest-green" : "text-main"
-          }`}
-        />
-      </button>
-      <button
-        type="button"
-        onClick={() => setViewMode("map")}
-        aria-label="Ver croquis"
-        className={`relative overflow-hidden px-4 py-2 rounded-lg border transition ${
-          viewMode === "map" ? "border-forest-green" : "border-stone-gray"
-        }`}
-      >
-        <span
-          className={`absolute inset-0 bg-snow-white transition duration-200 ${
-            viewMode === "map" ? "opacity-100 scale-100" : "opacity-0 scale-95"
-          }`}
-        />
-        <MapIcon
-          className={`relative z-10 w-5 h-5 transition ${
-            viewMode === "map" ? "text-forest-green" : "text-main"
-          }`}
-        />
-      </button>
+    <div className="inline-flex items-center gap-1 rounded-full bg-surface-alt p-1 border border-soft">
+      <Btn active={viewMode === "list"} onClick={() => setViewMode("list")} ariaLabel="Ver listado">
+        <QueueListIcon className="w-4 h-4" />
+        <span className="hidden sm:inline">Lista</span>
+      </Btn>
+      <Btn active={viewMode === "map"} onClick={() => setViewMode("map")} ariaLabel="Ver croquis">
+        <MapIcon className="w-4 h-4" />
+        <span className="hidden sm:inline">Croquis</span>
+      </Btn>
     </div>
+  );
+}
+
+function Btn({ active, onClick, ariaLabel, children }: {
+  active: boolean; onClick: () => void; ariaLabel: string; children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={ariaLabel}
+      className={[
+        "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition",
+        active
+          ? "bg-surface text-brand shadow-soft"
+          : "text-muted hover:text-primary",
+      ].join(" ")}
+    >
+      {children}
+    </button>
   );
 }

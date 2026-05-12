@@ -216,27 +216,24 @@ export default function Reservas() {
   };
 
   return (
-    <main
-      className="min-h-screen text-base"
-      style={{ backgroundColor: "#FBF9F5", ["--grass-green" as string]: "#84C940" } as React.CSSProperties}
-    >
+    <main className="min-h-screen flex flex-col bg-app">
       <Navbar />
       <AuthModal
         open={showAuthModal && !isAuthed}
         onClose={() => setShowAuthModal(false)}
         onAuthSuccess={() => setShowAuthModal(false)}
       />
-      <div className="w-full px-4 py-4 md:px-0 md:py-0">
+      <div className="flex-1 max-w-7xl mx-auto w-full px-4 md:px-6 py-6 md:py-10">
         {isLoading ? (
-          <div className="bg-snow-white rounded-2xl p-6 text-base text-main">
-            Cargando sedes y canchas...
+          <div className="card-soft p-8 text-center text-muted animate-pulse-soft">
+            Cargando sedes y canchas…
           </div>
         ) : loadError ? (
-          <div className="bg-snow-white rounded-2xl p-6 text-base text-main">
-            Ocurrio un error al cargar las reservas: {loadError}
+          <div className="card-soft p-8 text-center text-danger">
+            Ocurrió un error al cargar las reservas: {loadError}
           </div>
         ) : !campuses.length ? (
-          <div className="bg-snow-white rounded-2xl p-6 text-base text-main">
+          <div className="card-soft p-8 text-center text-muted">
             No hay sedes disponibles en este momento.
           </div>
         ) : (
@@ -244,8 +241,8 @@ export default function Reservas() {
             <button
               type="button"
               onClick={() => setIsCampusMenuOpen(true)}
-              className="md:hidden mb-4 inline-flex items-center gap-2 rounded-xl border border-forest-green px-3 py-2 text-base font-semibold text-forest-green"
-              aria-label="Abrir menu de sedes"
+              className="md:hidden mb-4 btn-secondary !py-2 !px-3"
+              aria-label="Abrir menú de sedes"
             >
               <span className="text-lg">≡</span>
               Seleccionar sede
@@ -258,17 +255,20 @@ export default function Reservas() {
               onSelect={setSelectedCampusId}
             />
 
-            <div className="grid grid-cols-1 gap-6 items-start md:items-start md:grid-cols-[260px_minmax(0,1fr)_320px]">
+            <div className="grid grid-cols-1 gap-6 items-start md:grid-cols-[260px_minmax(0,1fr)_320px]">
               <CampusSidebar
                 campuses={campuses}
                 selectedCampusId={selectedCampusId}
                 onSelect={setSelectedCampusId}
               />
 
-              <section className="order-2 md:order-2 space-y-5 pt-4 pb-8 md:pt-8">
+              <section className="order-2 md:order-2 space-y-5">
                 <div>
                   <div className="flex flex-wrap items-center justify-between gap-4">
-                    <h2 className="text-2xl font-semibold text-main">{selectedCampus?.name ?? "Sede"}</h2>
+                    <div>
+                      <p className="text-eyebrow text-brand mb-1">Sede activa</p>
+                      <h1 className="text-display-md font-display text-primary">{selectedCampus?.name ?? "Sede"}</h1>
+                    </div>
                     <ViewModeToggle viewMode={viewMode} setViewMode={setViewMode} />
                   </div>
                   <FilterBar
@@ -301,7 +301,7 @@ export default function Reservas() {
                 )}
               </section>
 
-              <div className="order-3 md:order-3 h-auto md:sticky md:top-0 self-start">
+              <div className="order-3 md:order-3 h-auto md:sticky md:top-20 self-start">
                 <CourtDetails
                   selectedCourt={selectedCourt}
                   selectedCampus={selectedCampus}

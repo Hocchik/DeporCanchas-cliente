@@ -1,4 +1,5 @@
 import React from "react";
+import { MapPinIcon } from "@heroicons/react/24/solid";
 
 type Campus = {
   id: string;
@@ -13,31 +14,45 @@ interface CampusSidebarProps {
 
 export default function CampusSidebar({ campuses, selectedCampusId, onSelect }: CampusSidebarProps) {
   return (
-    <aside
-      className="order-1 hidden h-auto shadow-sm md:order-1 md:block p-5 md:sticky md:top-0 self-start"
-      style={{ backgroundColor: "#F7FAFC" }}
-    >
-      <div className="mb-4">
-        <h2 className="text-xl font-semibold text-forest-green mt-5">
-          Nuestros Campus
+    <aside className="order-1 hidden md:order-1 md:block md:sticky md:top-20 self-start">
+      <div className="card-soft p-5">
+        <p className="text-eyebrow text-brand mb-2">Sedes</p>
+        <h2 className="font-display font-semibold text-lg text-primary mb-1">
+          Nuestros campus
         </h2>
-        <p className="text-base text-main">Selecciona tu campus preferido</p>
-      </div>
-      <div className="space-y-2">
-        {campuses.map((campus) => (
-          <button
-            key={campus.id}
-            type="button"
-            onClick={() => onSelect(campus.id)}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition ${
-              selectedCampusId === campus.id
-                ? "bg-grass-green text-forest-green"
-                : "text-main hover:bg-snow-white"
-            }`}
-          >
-            <span className="text-base font-semibold">{campus.name}</span>
-          </button>
-        ))}
+        <p className="text-sm text-muted mb-4">Elige tu campus preferido</p>
+
+        <div className="space-y-1.5">
+          {campuses.map((campus) => {
+            const active = selectedCampusId === campus.id;
+            return (
+              <button
+                key={campus.id}
+                type="button"
+                onClick={() => onSelect(campus.id)}
+                className={[
+                  "group w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition border",
+                  active
+                    ? "bg-brand text-on-brand border-brand shadow-soft"
+                    : "border-transparent text-primary hover:bg-brand-soft hover:border-soft",
+                ].join(" ")}
+              >
+                <span
+                  className={[
+                    "inline-flex items-center justify-center w-8 h-8 rounded-lg shrink-0 transition",
+                    active ? "bg-on-brand text-brand" : "bg-accent text-brand",
+                  ].join(" ")}
+                  style={active ? { backgroundColor: "var(--text-on-brand)", color: "var(--brand)" } : undefined}
+                >
+                  <MapPinIcon className="w-4 h-4" />
+                </span>
+                <span className="font-semibold text-sm flex-1 truncate">
+                  {campus.name}
+                </span>
+              </button>
+            );
+          })}
+        </div>
       </div>
     </aside>
   );
