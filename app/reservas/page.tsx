@@ -11,8 +11,7 @@ import CampusSidebar from "./components/CampusSidebar";
 import CampusMobileMenu from "./components/CampusMobileMenu";
 import FilterBar from "./components/FilterBar";
 import ViewModeToggle from "./components/ViewModeToggle";
-import LoginForm from "../components/LoginForm";
-import RegisterForm from "../components/RegisterForm";
+import AuthModal from "../components/AuthModal";
 import type { Court, CourtType, ReservasData } from "./types";
 import { SLOT_TIMES, getStatusForCourt } from "./utils";
 import { createClient } from "../../lib/supabase/client";
@@ -256,7 +255,6 @@ export default function Reservas() {
   const [selectionMessage, setSelectionMessage] = useState("");
   const [isCampusMenuOpen, setIsCampusMenuOpen] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
-  const [authTab, setAuthTab] = useState<"login" | "register">("login");
   const [pendingReservation, setPendingReservation] = useState<{
     campusName?: string;
     campusAddress?: string;
@@ -653,78 +651,17 @@ export default function Reservas() {
       }
     >
       <Navbar />
-      {showAuthModal && !isAuthed && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-          <div className="w-full max-w-2xl rounded-2xl bg-snow-white p-6 shadow-xl">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <h2 className="text-xl font-semibold text-main">
-                  Inicia sesion para continuar
-                </h2>
-                <p className="text-sm text-main">
-                  Necesitas una cuenta activa para reservar y pagar.
-                </p>
-              </div>
-              <button
-                type="button"
-                className="text-2xl text-main"
-                onClick={() => {
-                  setShowAuthModal(false);
-                  setPendingReservation(null);
-                }}
-                aria-label="Cerrar"
-              >
-                ×
-              </button>
-            </div>
-
-            <div className="mt-5 inline-flex rounded-full bg-stone-gray p-1">
-              <button
-                type="button"
-                onClick={() => setAuthTab("login")}
-                className={`px-4 py-2 text-sm font-semibold rounded-full transition border ${
-                  authTab === "login"
-                    ? "bg-snow-white text-main border-stone-gray"
-                    : "text-main border-transparent opacity-70"
-                }`}
-              >
-                Iniciar sesion
-              </button>
-              <button
-                type="button"
-                onClick={() => setAuthTab("register")}
-                className={`px-4 py-2 text-sm font-semibold rounded-full transition border ${
-                  authTab === "register"
-                    ? "bg-snow-white text-main border-stone-gray"
-                    : "text-main border-transparent opacity-70"
-                }`}
-              >
-                Registrarse
-              </button>
-            </div>
-
-            <div className="mt-6">
-              {authTab === "login" ? (
-                <LoginForm
-                  onLogin={() => {
-                    setShowAuthModal(false);
-                    setIsAuthed(true);
-                  }}
-                  redirectTo={null}
-                />
-              ) : (
-                <RegisterForm
-                  onRegister={() => {
-                    setShowAuthModal(false);
-                    setIsAuthed(true);
-                  }}
-                  redirectTo={null}
-                />
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+      <AuthModal
+        open={showAuthModal && !isAuthed}
+        onClose={() => {
+          setShowAuthModal(false);
+          setPendingReservation(null);
+        }}
+        onAuthSuccess={() => {
+          setShowAuthModal(false);
+          setIsAuthed(true);
+        }}
+      />
       <div className="w-full px-4 py-4 md:px-0 md:py-0">
         {isLoading ? (
           <div className="bg-snow-white rounded-2xl p-6 text-base text-main">
