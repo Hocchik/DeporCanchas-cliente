@@ -1,17 +1,8 @@
-import { createBrowserClient } from "@supabase/ssr";
+// Compat shim: el código viejo llamaba createClient({ persistSession }).
+// El nuevo cliente no necesita opciones de auth (auth deja de ser Supabase Auth).
+// Será removido cuando todos los usos se actualicen.
+import { createPublicClient } from "./public";
 
-type ClientOptions = {
-  persistSession?: boolean;
-};
-
-export function createClient(options?: ClientOptions) {
-  return createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
-    {
-      auth: {
-        persistSession: options?.persistSession ?? true,
-      },
-    }
-  );
+export function createClient(_options?: { persistSession?: boolean }) {
+  return createPublicClient();
 }
