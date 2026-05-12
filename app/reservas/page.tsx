@@ -714,13 +714,9 @@ export default function Reservas() {
                 />
               ) : (
                 <RegisterForm
-                  onRegister={(_user, session) => {
-                    if (session) {
-                      setShowAuthModal(false);
-                      setIsAuthed(true);
-                    } else {
-                      setAuthTab("login");
-                    }
+                  onRegister={() => {
+                    setShowAuthModal(false);
+                    setIsAuthed(true);
                   }}
                   redirectTo={null}
                 />
