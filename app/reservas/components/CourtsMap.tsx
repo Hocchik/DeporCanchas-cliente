@@ -1,14 +1,17 @@
+import { MapIcon } from "@heroicons/react/24/solid";
+
 export default function CourtsMap() {
   return (
-    <div className="rounded-2xl p-6 text-center bg-snow-white text-base">
-      <div className="border border-dashed border-forest-green rounded-2xl py-14">
-        <h3 className="text-xl font-semibold text-forest-green">
-          Vista de croquis en preparacion
-        </h3>
-        <p className="text-base text-main mt-2">
-          Aqui mostraremos el mapa de las canchas para seleccionar visualmente.
-        </p>
+    <div className="card-soft p-8 text-center">
+      <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-accent text-brand mb-4">
+        <MapIcon className="w-7 h-7" />
       </div>
+      <h3 className="font-display font-semibold text-lg text-primary mb-1">
+        Vista de croquis en preparación
+      </h3>
+      <p className="text-sm text-muted max-w-sm mx-auto">
+        Pronto mostraremos un mapa interactivo para seleccionar tu cancha visualmente.
+      </p>
     </div>
   );
 }

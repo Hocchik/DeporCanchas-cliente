@@ -301,7 +301,7 @@ export default function Reservas() {
                 )}
               </section>
 
-              <div className="order-3 md:order-3 h-auto md:sticky md:top-0 self-start">
+              <div className="order-3 md:order-3 h-auto md:sticky md:top-20 self-start">
                 <CourtDetails
                   selectedCourt={selectedCourt}
                   selectedCampus={selectedCampus}
