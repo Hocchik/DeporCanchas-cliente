@@ -16,6 +16,7 @@ type CourtDetailsProps = {
     slots: string[];
     total: number;
   }) => void;
+  submitting?: boolean;
 };
 
 export default function CourtDetails({
@@ -25,8 +26,9 @@ export default function CourtDetails({
   selectedSlots,
   totalPrice,
   onConfirm,
+  submitting,
 }: CourtDetailsProps) {
-  const isDisabled = selectedSlots.length === 0 || !selectedCourt;
+  const isDisabled = selectedSlots.length === 0 || !selectedCourt || Boolean(submitting);
 
   const handleConfirm = () => {
     if (isDisabled) return;
@@ -113,7 +115,7 @@ export default function CourtDetails({
           disabled={isDisabled}
           onClick={handleConfirm}
         >
-          Confirmar horarios
+          {submitting ? "Procesando…" : "Confirmar horarios"}
         </button>
       </div>
     </aside>

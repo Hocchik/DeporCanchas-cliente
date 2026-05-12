@@ -12,241 +12,73 @@ import CampusMobileMenu from "./components/CampusMobileMenu";
 import FilterBar from "./components/FilterBar";
 import ViewModeToggle from "./components/ViewModeToggle";
 import AuthModal from "../components/AuthModal";
-import type { Court, CourtType, ReservasData } from "./types";
+import type { Court, CourtType } from "./types";
 import { SLOT_TIMES, getStatusForCourt } from "./utils";
-import { createClient } from "../../lib/supabase/client";
+import { useReservasData, type BaseTariffs } from "./hooks/useReservasData";
+import { useSession } from "../contexts/SessionContext";
 import "../styles/colors.css";
 
-type CampusRow = {
-  id: number;
-  nombre: string;
-  ubicacion: string;
-  estado: string;
-};
-
-type CourtRow = {
-  id: number;
-  campus_id: number;
-  nombre: string;
-  tipo_deporte: string;
-  estado: string;
-};
-
-type AvailabilityRow = {
-  canchasdep_id: number;
-  dias_de_la_semana: number;
-  hora_abre: string;
-  hora_cierra: string;
-};
-
-type ReservaRow = {
-  canchasdep_id: number;
-  fecha_empieza: string;
-  fecha_termina: string;
-  estado: string | null;
-};
-
-type TarifaRow = {
-  canchasdep_id: number;
-  precio_reemplazo: number | null;
-  tarifas: {
-    nombre: string | null;
-    precio: number;
-    prioridad: number;
-    hora_empieza: string | null;
-    hora_termina: string | null;
-    fecha_empieza: string | null;
-    fecha_termina: string | null;
-  }[];
-};
-
-type BaseTariffs = {
-  futbol7: number;
-  futbol11: number;
-  tenis: number;
-  padel: number;
-};
-
 const toDateKey = (date: Date) => {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
 };
 
-const toMinutes = (timeValue: string) => {
-  const [hours, minutes] = timeValue.split(":").map(Number);
-  return hours * 60 + minutes;
-};
-
-const isReservationActive = (estado: string | null) => {
-  if (!estado) {
-    return true;
-  }
-  const normalized = estado.trim().toLowerCase();
-  return !["cancelado", "anulado", "rechazado"].includes(normalized);
-};
-
-const normalizeText = (value: string) =>
-  value.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+const normalizeText = (v: string) =>
+  v.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
 
 const matchesSportKey = (sportKey: Court["sportKey"], name?: string | null) => {
-  if (!name) {
-    return false;
-  }
-  const normalized = normalizeText(name);
-  if (sportKey === "tenis") {
-    return normalized.includes("tenis");
-  }
-  if (sportKey === "padel") {
-    return normalized.includes("padel");
-  }
+  if (!name) return false;
+  const n = normalizeText(name);
+  if (sportKey === "tenis") return n.includes("tenis");
+  if (sportKey === "padel") return n.includes("padel");
   if (sportKey === "futbol11") {
-    return (
-      normalized.includes("futbol 11") ||
-      normalized.includes("futbol11") ||
-      normalized.includes("futbol once")
-    );
+    return n.includes("futbol 11") || n.includes("futbol11") || n.includes("futbol once");
   }
-  return (
-    normalized.includes("futbol 7") ||
-    normalized.includes("futbol7") ||
-    normalized.includes("futsal")
-  );
+  return n.includes("futbol 7") || n.includes("futbol7") || n.includes("futsal");
 };
 
-const isDateInRange = (
-  dateKey: string,
-  start: string | null,
-  end: string | null
-) => {
-  if (start && dateKey < start) {
-    return false;
-  }
-  if (end && dateKey > end) {
-    return false;
-  }
+const isDateInRange = (dateKey: string, start: string | null, end: string | null) => {
+  if (start && dateKey < start) return false;
+  if (end && dateKey > end) return false;
   return true;
 };
 
-const resolveCourtPrice = (
-  court: Court,
-  date: Date,
-  baseTariffs: BaseTariffs
-) => {
+const resolveCourtPrice = (court: Court, date: Date, baseTariffs: BaseTariffs) => {
   const dateKey = toDateKey(date);
   const sportKey = court.sportKey ?? "futbol7";
   const candidates = (court.tariffs ?? [])
-    .filter((tarifa) => matchesSportKey(sportKey, tarifa.nombre))
-    .filter((tarifa) =>
-      isDateInRange(dateKey, tarifa.fecha_empieza, tarifa.fecha_termina)
-    );
+    .filter((t) => matchesSportKey(sportKey, t.nombre))
+    .filter((t) => isDateInRange(dateKey, t.fecha_empieza, t.fecha_termina));
 
   if (candidates.length) {
-    candidates.sort((a, b) => {
-      const priorityA = a.prioridad ?? 0;
-      const priorityB = b.prioridad ?? 0;
-      return priorityA - priorityB;
-    });
+    candidates.sort((a, b) => (a.prioridad ?? 0) - (b.prioridad ?? 0));
     return candidates[0].precio ?? 0;
   }
-
   return baseTariffs[sportKey] ?? 0;
-};
-
-const courtImageForType = (type: CourtType) => {
-  if (type === "futbol") {
-    return "/Canchas_de_futbol_los_olivos.png";
-  }
-  if (type === "tenis") {
-    return "/Canchasfutbol8.jpg";
-  }
-  return "/Clubterrazas_Miraflores.jpg";
-};
-
-const buildAvailabilityForCourt = (
-  courtId: number,
-  dates: Date[],
-  availabilityRows: AvailabilityRow[],
-  reservas: ReservaRow[]
-) => {
-  const blockedByDate: Record<string, string[]> = {};
-  const occupiedByDate: Record<string, string[]> = {};
-
-  const availabilityByDay = availabilityRows
-    .filter((row) => row.canchasdep_id === courtId)
-    .reduce<Record<string, { start: number; end: number }[]>>(
-      (accumulator, row) => {
-        const key = String(row.dias_de_la_semana);
-        const start = toMinutes(row.hora_abre);
-        const end = toMinutes(row.hora_cierra);
-        if (!accumulator[key]) {
-          accumulator[key] = [];
-        }
-        accumulator[key].push({ start, end });
-        return accumulator;
-      },
-      {}
-    );
-
-  const reservationsByDate = reservas
-    .filter((row) => row.canchasdep_id === courtId)
-    .filter((row) => isReservationActive(row.estado))
-    .reduce<Record<string, Set<string>>>((accumulator, row) => {
-      const start = new Date(row.fecha_empieza);
-      const end = new Date(row.fecha_termina);
-      const dateKey = toDateKey(start);
-      const startMinutes = start.getHours() * 60 + start.getMinutes();
-      const endMinutes = end.getHours() * 60 + end.getMinutes();
-      const slotSet = accumulator[dateKey] ?? new Set<string>();
-
-      SLOT_TIMES.forEach((time) => {
-        const slotMinutes = toMinutes(time);
-        if (slotMinutes >= startMinutes && slotMinutes < endMinutes) {
-          slotSet.add(time);
-        }
-      });
-
-      accumulator[dateKey] = slotSet;
-      return accumulator;
-    }, {});
-
-  dates.forEach((date) => {
-    const dateKey = toDateKey(date);
-    const dayKey = String(date.getDay());
-    const ranges = availabilityByDay[dayKey] ?? [];
-
-    const blockedTimes = SLOT_TIMES.filter((time) => {
-      if (!ranges.length) {
-        return true;
-      }
-      const slotMinutes = toMinutes(time);
-      return !ranges.some(
-        (range) => slotMinutes >= range.start && slotMinutes < range.end
-      );
-    });
-
-    blockedByDate[dateKey] = blockedTimes;
-
-    const occupiedSet = reservationsByDate[dateKey];
-    occupiedByDate[dateKey] = occupiedSet
-      ? Array.from(occupiedSet.values())
-      : [];
-  });
-
-  return { blockedByDate, occupiedByDate };
 };
 
 export default function Reservas() {
   const router = useRouter();
-  const supabase = useMemo(() => createClient(), []);
-  const [campuses, setCampuses] = useState<ReservasData["campuses"]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [loadError, setLoadError] = useState("");
+  const { user } = useSession();
+  const isAuthed = Boolean(user);
+
+  const visibleCount = useMemo(() => 2, []);
+
+  const allDates = useMemo(() => {
+    const today = new Date();
+    return Array.from({ length: 21 }, (_, i) => {
+      const d = new Date(today);
+      d.setDate(today.getDate() + i);
+      return d;
+    });
+  }, []);
+
+  const { campuses, baseTariffs, isLoading, loadError } = useReservasData(allDates);
+
   const [selectedCampusId, setSelectedCampusId] = useState("");
-  const [selectedSport, setSelectedSport] = useState<"all" | CourtType>(
-    "all"
-  );
+  const [selectedSport, setSelectedSport] = useState<"all" | CourtType>("all");
   const [selectedCourtId, setSelectedCourtId] = useState("");
   const [selectedDateIndex, setSelectedDateIndex] = useState(0);
   const [windowStart, setWindowStart] = useState(0);
@@ -255,76 +87,32 @@ export default function Reservas() {
   const [selectionMessage, setSelectionMessage] = useState("");
   const [isCampusMenuOpen, setIsCampusMenuOpen] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
-  const [pendingReservation, setPendingReservation] = useState<{
-    campusName?: string;
-    campusAddress?: string;
-    courtName?: string;
-    courtImage?: string;
-    date?: string;
-    slots: string[];
-    total: number;
-  } | null>(null);
-  const [isAuthed, setIsAuthed] = useState(false);
-  const [baseTariffs, setBaseTariffs] = useState<BaseTariffs>({
-    futbol7: 0,
-    futbol11: 0,
-    tenis: 0,
-    padel: 0,
-  });
-
-  const visibleCount = useMemo(() => 2, []);
-
-  const allDates = useMemo(() => {
-    const today = new Date();
-    return Array.from({ length: 21 }, (_, index) => {
-      const date = new Date(today);
-      date.setDate(today.getDate() + index);
-      return date;
-    });
-  }, []);
+  const [submitting, setSubmitting] = useState(false);
 
   const visibleDates = useMemo(
     () => allDates.slice(windowStart, windowStart + visibleCount),
     [allDates, windowStart, visibleCount]
   );
-
   const selectedDate = allDates[selectedDateIndex] ?? allDates[0];
-
-  const selectedCampus = campuses.find(
-    (campus) => campus.id === selectedCampusId
-  );
+  const selectedCampus = campuses.find((c) => c.id === selectedCampusId);
 
   useEffect(() => {
-    if (campuses.length && !selectedCampusId) {
-      setSelectedCampusId(campuses[0].id);
-    }
+    if (campuses.length && !selectedCampusId) setSelectedCampusId(campuses[0].id);
   }, [campuses, selectedCampusId]);
 
   const filteredCourts = useMemo(() => {
     const courts = selectedCampus?.courts ?? [];
-    if (selectedSport === "all") {
-      return courts;
-    }
-    return courts.filter((court) => court.type === selectedSport);
+    return selectedSport === "all" ? courts : courts.filter((c) => c.type === selectedSport);
   }, [selectedCampus, selectedSport]);
 
   const pricedCourts = useMemo(
-    () =>
-      filteredCourts.map((court) => ({
-        ...court,
-        pricePerHour: resolveCourtPrice(court, selectedDate, baseTariffs),
-      })),
+    () => filteredCourts.map((c) => ({ ...c, pricePerHour: resolveCourtPrice(c, selectedDate, baseTariffs) })),
     [filteredCourts, selectedDate, baseTariffs]
   );
 
-  console.log("Priced courts:", pricedCourts);
-
   useEffect(() => {
-    if (!filteredCourts.length) {
-      setSelectedCourtId("");
-      return;
-    }
-    if (!filteredCourts.some((court) => court.id === selectedCourtId)) {
+    if (!filteredCourts.length) { setSelectedCourtId(""); return; }
+    if (!filteredCourts.some((c) => c.id === selectedCourtId)) {
       setSelectedCourtId(filteredCourts[0].id);
     }
   }, [filteredCourts, selectedCourtId]);
@@ -335,280 +123,40 @@ export default function Reservas() {
   }, [selectedCourtId, selectedDateIndex]);
 
   useEffect(() => {
-    let isMounted = true;
-
-    const loadReservasData = async () => {
-      try {
-        setIsLoading(true);
-        setLoadError("");
-
-        const today = new Date();
-        const startDate = new Date(
-          today.getFullYear(),
-          today.getMonth(),
-          today.getDate()
-        );
-        const endDate = new Date(startDate);
-        endDate.setDate(startDate.getDate() + 21);
-
-        const [campusResult, courtsResult, availabilityResult, tarifasResult, reservasResult, baseTarifasResult] =
-          await Promise.all([
-            supabase.from("campus").select("id, nombre, ubicacion, estado"),
-            supabase
-              .from("canchas_deportivas")
-              .select("id, campus_id, nombre, tipo_deporte, estado"),
-            supabase
-              .from("cancha_disponibilidad")
-              .select("canchasdep_id, dias_de_la_semana, hora_abre, hora_cierra"),
-            supabase
-              .from("tarifas_canchasdep")
-              .select(
-                "canchasdep_id, precio_reemplazo, tarifas (nombre, precio, prioridad, hora_empieza, hora_termina, fecha_empieza, fecha_termina)"
-              ),
-            supabase
-              .from("reservas")
-              .select("canchasdep_id, fecha_empieza, fecha_termina, estado")
-              .gte("fecha_empieza", startDate.toISOString())
-              .lt("fecha_empieza", endDate.toISOString()),
-            supabase.from("tarifas").select("nombre, precio"),
-          ]);
-
-        if (
-          campusResult.error ||
-          courtsResult.error ||
-          availabilityResult.error ||
-          tarifasResult.error ||
-          reservasResult.error ||
-          baseTarifasResult.error
-        ) {
-          throw (
-            campusResult.error ||
-            courtsResult.error ||
-            availabilityResult.error ||
-            tarifasResult.error ||
-            reservasResult.error ||
-            baseTarifasResult.error
-          );
-        }
-
-        const campusRows = (campusResult.data ?? []) as CampusRow[];
-        const courtRows = (courtsResult.data ?? []) as CourtRow[];
-        const availabilityRows =
-          (availabilityResult.data ?? []) as AvailabilityRow[];
-        const tarifaRows = (tarifasResult.data ?? []) as TarifaRow[];
-        const reservaRows = (reservasResult.data ?? []) as ReservaRow[];
-        const baseTarifaRows =
-          (baseTarifasResult.data ?? []) as { nombre: string; precio: number }[];
-
-        const baseByName = baseTarifaRows.reduce<BaseTariffs>(
-          (accumulator, tarifa) => {
-            const normalized = normalizeText(tarifa.nombre);
-            if (normalized.includes("futbol 11") || normalized.includes("futbol11")) {
-              accumulator.futbol11 = tarifa.precio;
-            } else if (
-              normalized.includes("futbol 7") ||
-              normalized.includes("futbol7") ||
-              normalized.includes("futsal")
-            ) {
-              accumulator.futbol7 = tarifa.precio;
-            } else if (normalized.includes("padel")) {
-              accumulator.padel = tarifa.precio;
-            } else if (normalized.includes("tenis")) {
-              accumulator.tenis = tarifa.precio;
-            }
-            return accumulator;
-          },
-          { futbol7: 0, futbol11: 0, tenis: 0, padel: 0 }
-        );
-
-        const mappedCampuses = campusRows.map((campus) => {
-          const campusCourts = courtRows
-            .filter((court) => court.campus_id === campus.id)
-            .map((court) => {
-              const normalizedType = court.tipo_deporte
-                .toLowerCase()
-                .normalize("NFD")
-                .replace(/[\u0300-\u036f]/g, "");
-              let sportKey: Court["sportKey"] = "futbol7";
-              let type: CourtType = "futbol";
-              if (normalizedType.includes("tenis")) {
-                type = "tenis";
-                sportKey = "tenis";
-              } else if (normalizedType.includes("padel")) {
-                type = "padel";
-                sportKey = "padel";
-              } else if (
-                normalizedType.includes("futbol 11") ||
-                normalizedType.includes("futbol11") ||
-                normalizedType.includes("futbol once")
-              ) {
-                type = "futbol";
-                sportKey = "futbol11";
-              } else if (
-                normalizedType.includes("futbol") ||
-                normalizedType.includes("futsal")
-              ) {
-                type = "futbol";
-                sportKey = "futbol7";
-              }
-
-              const availability = buildAvailabilityForCourt(
-                court.id,
-                allDates,
-                availabilityRows,
-                reservaRows
-              );
-
-              const tariffCandidates = tarifaRows
-                .filter((tarifa) => tarifa.canchasdep_id === court.id)
-                .flatMap((tarifa) => {
-                  const items = Array.isArray(tarifa.tarifas)
-                    ? tarifa.tarifas
-                    : tarifa.tarifas
-                      ? [tarifa.tarifas]
-                      : [];
-                  return items.map((item) => ({
-                    ...item,
-                    precio: tarifa.precio_reemplazo ?? item.precio,
-                  }));
-                });
-
-              return {
-                id: String(court.id),
-                name: court.nombre,
-                type,
-                sportKey,
-                tariffs: tariffCandidates,
-                pricePerHour: 0,
-                image: courtImageForType(type),
-                availability,
-              } satisfies Court;
-            });
-
-          return {
-            id: String(campus.id),
-            name: campus.nombre,
-            address: campus.ubicacion,
-            courts: campusCourts,
-          };
-        });
-
-        if (isMounted) {
-          setBaseTariffs(baseByName);
-          setCampuses(mappedCampuses);
-        }
-      } catch (error) {
-        if (!isMounted) {
-          return;
-        }
-        const message = error instanceof Error ? error.message : String(error);
-        setLoadError(message);
-      } finally {
-        if (isMounted) {
-          setIsLoading(false);
-        }
-      }
-    };
-
-    loadReservasData();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [allDates, supabase]);
-
-  useEffect(() => {
-    let isMounted = true;
-    const checkSession = async () => {
-      const { data } = await supabase.auth.getSession();
-      if (!isMounted) return;
-      setIsAuthed(Boolean(data.session));
-    };
-
-    checkSession();
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      const authed = Boolean(session);
-      setIsAuthed(authed);
-      if (authed && pendingReservation) {
-        sessionStorage.setItem(
-          "reservationPayment",
-          JSON.stringify(pendingReservation)
-        );
-        setPendingReservation(null);
-        setShowAuthModal(false);
-        router.push("/reservas/pago");
-      }
-    });
-
-    return () => {
-      isMounted = false;
-      subscription.unsubscribe();
-    };
-  }, [pendingReservation, router, supabase]);
-
-  useEffect(() => {
-    if (selectedDateIndex < windowStart) {
-      setSelectedDateIndex(windowStart);
-    }
-    if (selectedDateIndex > windowStart + visibleCount - 1) {
-      setSelectedDateIndex(windowStart + visibleCount - 1);
-    }
+    if (selectedDateIndex < windowStart) setSelectedDateIndex(windowStart);
+    if (selectedDateIndex > windowStart + visibleCount - 1) setSelectedDateIndex(windowStart + visibleCount - 1);
   }, [selectedDateIndex, windowStart, visibleCount]);
 
-  const selectedCourt = pricedCourts.find(
-    (court) => court.id === selectedCourtId
-  );
+  const selectedCourt = pricedCourts.find((c) => c.id === selectedCourtId);
 
   const selectedCourtSlots = useMemo(() => {
-    if (!selectedCourt || !selectedDate) {
-      return [];
-    }
+    if (!selectedCourt || !selectedDate) return [];
     return getStatusForCourt(selectedCourt, selectedDate);
   }, [selectedCourt, selectedDate]);
 
   const handleSlotToggle = (time: string) => {
     const slot = selectedCourtSlots.find((entry) => entry.time === time);
-    if (!slot || slot.status !== "free") {
-      return;
-    }
+    if (!slot || slot.status !== "free") return;
 
     setSelectedSlots((previous) => {
       setSelectionMessage("");
-      if (previous.includes(time)) {
-        return previous.filter((item) => item !== time);
-      }
-
-      if (previous.length === 0) {
-        return [time];
-      }
-
+      if (previous.includes(time)) return previous.filter((i) => i !== time);
+      if (previous.length === 0) return [time];
       if (previous.length === 1) {
-        const currentIndex = SLOT_TIMES.indexOf(previous[0]);
-        const nextIndex = SLOT_TIMES.indexOf(time);
-        if (Math.abs(currentIndex - nextIndex) !== 1) {
-          setSelectionMessage(
-            "Para reservar 2 horas, deben ser consecutivas. Selecciona una hora contigua."
-          );
+        const a = SLOT_TIMES.indexOf(previous[0]);
+        const b = SLOT_TIMES.indexOf(time);
+        if (Math.abs(a - b) !== 1) {
+          setSelectionMessage("Para reservar 2 horas, deben ser consecutivas. Selecciona una hora contigua.");
           return previous;
         }
-        return [previous[0], time].sort(
-          (a, b) => SLOT_TIMES.indexOf(a) - SLOT_TIMES.indexOf(b)
-        );
+        return [previous[0], time].sort((x, y) => SLOT_TIMES.indexOf(x) - SLOT_TIMES.indexOf(y));
       }
-
-      setSelectionMessage(
-        "Solo puedes elegir 1 o 2 horas. Selecciona una nueva hora para reiniciar."
-      );
+      setSelectionMessage("Solo puedes elegir 1 o 2 horas. Selecciona una nueva hora para reiniciar.");
       return [time];
     });
   };
 
-  const totalPrice = selectedCourt
-    ? selectedSlots.length * selectedCourt.pricePerHour
-    : 0;
+  const totalPrice = selectedCourt ? selectedSlots.length * selectedCourt.pricePerHour : 0;
 
   const handleConfirmReservation = async (payload: {
     campusName?: string;
@@ -619,48 +167,64 @@ export default function Reservas() {
     slots: string[];
     total: number;
   }) => {
-    const reservation = {
-      campusName: payload.campusName,
-      campusAddress: payload.campusAddress,
-      courtName: payload.courtName,
-      courtImage: payload.courtImage,
-      date: payload.date ? payload.date.toISOString() : undefined,
-      slots: payload.slots,
-      total: payload.total,
-    };
-
-    const { data } = await supabase.auth.getSession();
-    if (data.session) {
-      sessionStorage.setItem("reservationPayment", JSON.stringify(reservation));
-      router.push("/reservas/pago");
-    } else {
-      setPendingReservation(reservation);
+    if (!isAuthed) {
       setShowAuthModal(true);
+      return;
+    }
+    if (!selectedCourt || !payload.date || !payload.slots.length) return;
+
+    const sorted = [...payload.slots].sort((a, b) => SLOT_TIMES.indexOf(a) - SLOT_TIMES.indexOf(b));
+    const [sh, sm] = sorted[0].split(":").map(Number);
+    const [eh, em] = sorted[sorted.length - 1].split(":").map(Number);
+    const start = new Date(payload.date);
+    start.setHours(sh, sm, 0, 0);
+    const end = new Date(payload.date);
+    end.setHours(eh, em + 60, 0, 0);
+
+    setSubmitting(true);
+    try {
+      const res = await fetch("/api/reservas", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          canchasdep_id: Number(selectedCourt.id),
+          fecha_empieza: start.toISOString(),
+          fecha_termina: end.toISOString(),
+        }),
+      });
+
+      if (res.status === 401) {
+        setShowAuthModal(true);
+        return;
+      }
+      if (res.status === 409) {
+        setSelectionMessage("Ese horario ya no está disponible. Elige otro.");
+        return;
+      }
+      if (!res.ok) {
+        setSelectionMessage("Error al crear la reserva. Intenta de nuevo.");
+        return;
+      }
+
+      const data = await res.json();
+      router.push(`/reservas/pago?code=${data.reserva.code}`);
+    } catch {
+      setSelectionMessage("Error de red. Intenta de nuevo.");
+    } finally {
+      setSubmitting(false);
     }
   };
 
-    
   return (
     <main
       className="min-h-screen text-base"
-      style={
-        {
-          backgroundColor: "#FBF9F5",
-          ["--grass-green" as string]: "#84C940",
-        } as React.CSSProperties
-      }
+      style={{ backgroundColor: "#FBF9F5", ["--grass-green" as string]: "#84C940" } as React.CSSProperties}
     >
       <Navbar />
       <AuthModal
         open={showAuthModal && !isAuthed}
-        onClose={() => {
-          setShowAuthModal(false);
-          setPendingReservation(null);
-        }}
-        onAuthSuccess={() => {
-          setShowAuthModal(false);
-          setIsAuthed(true);
-        }}
+        onClose={() => setShowAuthModal(false)}
+        onAuthSuccess={() => setShowAuthModal(false)}
       />
       <div className="w-full px-4 py-4 md:px-0 md:py-0">
         {isLoading ? (
@@ -701,56 +265,53 @@ export default function Reservas() {
                 onSelect={setSelectedCampusId}
               />
 
-          <section className="order-2 md:order-2 space-y-5 pt-4 pb-8 md:pt-8">
-            <div>
-              <div className="flex flex-wrap items-center justify-between gap-4">
+              <section className="order-2 md:order-2 space-y-5 pt-4 pb-8 md:pt-8">
                 <div>
-                  <h2 className="text-2xl font-semibold text-main">
-                    {selectedCampus?.name ?? "Sede"}
-                  </h2>
+                  <div className="flex flex-wrap items-center justify-between gap-4">
+                    <h2 className="text-2xl font-semibold text-main">{selectedCampus?.name ?? "Sede"}</h2>
+                    <ViewModeToggle viewMode={viewMode} setViewMode={setViewMode} />
+                  </div>
+                  <FilterBar
+                    selectedSport={selectedSport}
+                    setSelectedSport={setSelectedSport}
+                    visibleDates={visibleDates}
+                    selectedDateIndex={selectedDateIndex}
+                    setSelectedDateIndex={setSelectedDateIndex}
+                    windowStart={windowStart}
+                    setWindowStart={setWindowStart}
+                    allDates={allDates}
+                    visibleCount={visibleCount}
+                  />
                 </div>
-                <ViewModeToggle viewMode={viewMode} setViewMode={setViewMode} />
+
+                {viewMode === "map" ? (
+                  <CourtsMap />
+                ) : (
+                  <CourtsList
+                    courts={pricedCourts}
+                    selectedCampus={selectedCampus}
+                    selectedDate={selectedDate}
+                    selectedCourtId={selectedCourtId}
+                    selectedCourtSlots={selectedCourtSlots}
+                    selectedSlots={selectedSlots}
+                    selectionMessage={selectionMessage}
+                    onSelectCourt={setSelectedCourtId}
+                    onToggleSlot={handleSlotToggle}
+                  />
+                )}
+              </section>
+
+              <div className="order-3 md:order-3 h-auto md:sticky md:top-0 self-start">
+                <CourtDetails
+                  selectedCourt={selectedCourt}
+                  selectedCampus={selectedCampus}
+                  selectedDate={selectedDate}
+                  selectedSlots={selectedSlots}
+                  totalPrice={totalPrice}
+                  onConfirm={handleConfirmReservation}
+                  submitting={submitting}
+                />
               </div>
-              <FilterBar
-                selectedSport={selectedSport}
-                setSelectedSport={setSelectedSport}
-                visibleDates={visibleDates}
-                selectedDateIndex={selectedDateIndex}
-                setSelectedDateIndex={setSelectedDateIndex}
-                windowStart={windowStart}
-                setWindowStart={setWindowStart}
-                allDates={allDates}
-                visibleCount={visibleCount}
-              />
-            </div>
-
-            {viewMode === "map" ? (
-              <CourtsMap />
-            ) : (
-              <CourtsList
-                courts={pricedCourts}
-                selectedCampus={selectedCampus}
-                selectedDate={selectedDate}
-                selectedCourtId={selectedCourtId}
-                selectedCourtSlots={selectedCourtSlots}
-                selectedSlots={selectedSlots}
-                selectionMessage={selectionMessage}
-                onSelectCourt={setSelectedCourtId}
-                onToggleSlot={handleSlotToggle}
-              />
-            )}
-          </section>
-
-          <div className="order-3 md:order-3 h-auto md:sticky md:top-0 self-start">
-            <CourtDetails
-              selectedCourt={selectedCourt}
-              selectedCampus={selectedCampus}
-              selectedDate={selectedDate}
-              selectedSlots={selectedSlots}
-              totalPrice={totalPrice}
-              onConfirm={handleConfirmReservation}
-            />
-          </div>
             </div>
           </>
         )}
