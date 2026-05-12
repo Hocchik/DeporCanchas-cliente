@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { createClient } from "../../lib/supabase/client";
+import { createPublicClient } from "../../lib/supabase/public";
 
 type CampusRow = {
   id: number;
@@ -42,7 +42,7 @@ export default function SedesGrid() {
       setLoading(true);
       setError("");
       try {
-        const supabase = createClient();
+        const supabase = createPublicClient();
         const [campusRes, courtsRes] = await Promise.all([
           supabase.from("campus").select("id, nombre, ubicacion, estado"),
           supabase.from("canchas_deportivas").select("id, campus_id, nombre, tipo_deporte, estado"),
