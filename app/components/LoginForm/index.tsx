@@ -1,14 +1,13 @@
 "use client";
 import React from "react";
-import { EnvelopeIcon, LockClosedIcon, EyeIcon, EyeSlashIcon } from '@heroicons/react/24/solid';
+import { EnvelopeIcon, LockClosedIcon, EyeIcon, EyeSlashIcon, ArrowRightIcon } from '@heroicons/react/24/solid';
 import { useLogin } from "./useLogin";
-import "../../styles/colors.css";
 
 export default function LoginForm({
   onLogin,
   redirectTo,
 }: {
-  onLogin?: (user: any) => void;
+  onLogin?: (user: unknown) => void;
   redirectTo?: string | null;
 }) {
   const {
@@ -18,92 +17,111 @@ export default function LoginForm({
     keepLogged, setKeepLogged,
     alreadyLoggedIn, currentEmail,
     fieldErrors, setFieldErrors,
-    handleSubmit
+    handleSubmit,
   } = useLogin({ onLogin, redirectTo });
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4" autoComplete="off">
       {alreadyLoggedIn && (
-        <div className="text-sm text-[#386641] bg-[#eef7ea] border border-[#cfe2d5] rounded-md p-3">
-          Ya estas conectado{currentEmail ? `: ${currentEmail}` : ""}.
+        <div className="rounded-xl bg-brand-soft border border-default px-4 py-3 text-sm text-brand">
+          Ya estás conectado{currentEmail ? `: ${currentEmail}` : ""}.
         </div>
       )}
-      
-      {/* Correo electrónico */}
-      <div>
-        <label className="block mb-1 font-bold text-[1.15rem] text-[#386641]">Correo Electrónico</label>
-        <div className={`flex items-center bg-[#efeeed] rounded-xl px-4 py-3 gap-3 border transition-colors ${fieldErrors.email ? 'border-red-500' : 'border-transparent focus-within:border-[#386641]'}`}>
-          <EnvelopeIcon className="w-6 h-6 text-[#386641]" style={{ opacity: 0.6 }} />
+
+      <Field label="Correo electrónico" error={fieldErrors.email}>
+        <FieldShell hasError={!!fieldErrors.email}>
+          <EnvelopeIcon className="w-5 h-5 text-brand opacity-70 shrink-0" />
           <input
             type="email"
             name="login_email"
             autoComplete="off"
-            className="flex-1 bg-transparent border-none outline-none text-base font-semibold text-[#386641]"
             placeholder="alex.rivera@gmail.com"
             value={email}
             onChange={(e) => {
               setEmail(e.target.value);
               if (fieldErrors.email) setFieldErrors(prev => ({ ...prev, email: undefined }));
             }}
+            className="flex-1 bg-transparent border-none outline-none text-primary placeholder:text-soft text-base"
           />
-        </div>
-        {fieldErrors.email && <p className="text-red-500 text-sm mt-1 ml-2 leading-tight">{fieldErrors.email}</p>}
-      </div>
+        </FieldShell>
+      </Field>
 
-      {/* Contraseña */}
-      <div>
-        <div className="flex items-center justify-between mb-1">
-          <label className="font-bold text-[1.15rem] text-[#386641]">Contraseña</label>
-          <a href="#" className="text-blue-600 text-sm font-semibold hover:underline">¿Olvidaste tu contraseña?</a>
-        </div>
-        <div className={`flex items-center bg-[#efeeed] rounded-xl px-4 py-3 gap-3 border transition-colors ${fieldErrors.clave ? 'border-red-500' : 'border-transparent focus-within:border-[#386641]'}`}>
-          <LockClosedIcon className="w-6 h-6 text-[#386641]" style={{ opacity: 0.6 }} />
+      <Field
+        label="Contraseña"
+        error={fieldErrors.clave}
+        right={<a href="#" className="text-xs font-medium text-brand hover:underline">¿Olvidaste tu contraseña?</a>}
+      >
+        <FieldShell hasError={!!fieldErrors.clave}>
+          <LockClosedIcon className="w-5 h-5 text-brand opacity-70 shrink-0" />
           <input
             type={showPassword ? 'text' : 'password'}
             name="login_password"
             autoComplete="new-password"
-            className="flex-1 bg-transparent border-none outline-none text-base font-semibold tracking-widest text-[#386641]"
             placeholder="••••••••"
             value={clave}
             onChange={(e) => {
               setClave(e.target.value);
               if (fieldErrors.clave) setFieldErrors(prev => ({ ...prev, clave: undefined }));
             }}
+            className="flex-1 bg-transparent border-none outline-none text-primary placeholder:text-soft text-base tracking-widest"
           />
           <button
             type="button"
             tabIndex={-1}
-            className="focus:outline-none"
             onClick={() => setShowPassword((v) => !v)}
+            className="text-soft hover:text-brand transition shrink-0"
+            aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
           >
-            {showPassword ? (
-              <EyeSlashIcon className="w-6 h-6 text-[#386641]" style={{ opacity: 0.6 }} />
-            ) : (
-              <EyeIcon className="w-6 h-6 text-[#386641]" style={{ opacity: 0.6 }} />
-            )}
+            {showPassword ? <EyeSlashIcon className="w-5 h-5" /> : <EyeIcon className="w-5 h-5" />}
           </button>
-        </div>
-        {fieldErrors.clave && <p className="text-red-500 text-sm mt-1 ml-2 leading-tight">{fieldErrors.clave}</p>}
-      </div>
+        </FieldShell>
+      </Field>
 
-      {/* Mantener sesión iniciada */}
-      <div className="flex items-center gap-2 mt-5 mb-5">
+      <label className="flex items-center gap-2 text-sm text-muted cursor-pointer select-none">
         <input
           id="keep-logged"
           type="checkbox"
-          className="accent-forest-green"
+          className="accent-[var(--brand)] w-4 h-4"
           checked={keepLogged}
           onChange={(e) => setKeepLogged(e.target.checked)}
         />
-        <label htmlFor="keep-logged" className="text-[#386641] text-sm font-semibold select-none">Mantener sesión iniciada</label>
-      </div>
+        Mantener sesión iniciada
+      </label>
 
-      <button
-        type="submit"
-        className="w-full flex items-center justify-center gap-2 font-semibold text-snow-white py-3 rounded-md shadow-md transition bg-gradient-to-r from-[#0056D0] to-[#88A9FF] hover:from-[#003a8c] hover:to-[#88A9FF]"
-      >
+      <button type="submit" className="btn-primary w-full mt-2">
         Iniciar sesión
+        <ArrowRightIcon className="w-4 h-4" />
       </button>
     </form>
+  );
+}
+
+function Field({
+  label, error, right, children,
+}: {
+  label: string; error?: string; right?: React.ReactNode; children: React.ReactNode;
+}) {
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-1.5">
+        <label className="text-sm font-semibold text-primary">{label}</label>
+        {right}
+      </div>
+      {children}
+      {error && <p className="text-red-500 text-xs mt-1.5 ml-1">{error}</p>}
+    </div>
+  );
+}
+
+function FieldShell({ hasError, children }: { hasError?: boolean; children: React.ReactNode }) {
+  return (
+    <div
+      className={[
+        "flex items-center gap-3 rounded-xl px-4 py-3 border bg-surface-alt transition",
+        hasError ? "border-red-400" : "border-default focus-within:border-strong focus-within:bg-surface",
+      ].join(" ")}
+    >
+      {children}
+    </div>
   );
 }

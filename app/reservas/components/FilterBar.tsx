@@ -1,5 +1,5 @@
 import React from "react";
-import { SparklesIcon, TrophyIcon, BoltIcon, QueueListIcon } from "@heroicons/react/24/solid";
+import { SparklesIcon, TrophyIcon, BoltIcon, QueueListIcon, ChevronLeftIcon, ChevronRightIcon } from "@heroicons/react/24/solid";
 import type { CourtType } from "../types";
 
 interface FilterBarProps {
@@ -28,62 +28,69 @@ export default function FilterBar({
   visibleCount,
 }: FilterBarProps) {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-      <div className="bg-snow-white rounded-2xl p-4 shadow-sm">
-        <p className="text-base font-semibold text-main mb-3">Filtrar canchas</p>
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-5">
+      <div className="card-soft p-4">
+        <p className="text-xs font-semibold text-muted uppercase tracking-wider mb-3">Deporte</p>
         <div className="flex flex-wrap gap-2">
           {[
             { id: "all", label: "Todos", icon: SparklesIcon },
-            { id: "futbol", label: "Futbol", icon: TrophyIcon },
+            { id: "futbol", label: "Fútbol", icon: TrophyIcon },
             { id: "tenis", label: "Tenis", icon: BoltIcon },
-            { id: "padel", label: "Padel", icon: QueueListIcon },
-          ].map((option) => (
-            <button
-              key={option.id}
-              type="button"
-              onClick={() => setSelectedSport(option.id as "all" | CourtType)}
-              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-sm font-semibold border transition ${
-                selectedSport === option.id
-                  ? "bg-forest-green text-snow-white border-forest-green"
-                  : "bg-transparent text-main border-stone-gray hover:border-forest-green"
-              }`}
-            >
-              <option.icon className="w-3.5 h-3.5" />
-              {option.label}
-            </button>
-          ))}
+            { id: "padel", label: "Pádel", icon: QueueListIcon },
+          ].map((option) => {
+            const active = selectedSport === option.id;
+            return (
+              <button
+                key={option.id}
+                type="button"
+                onClick={() => setSelectedSport(option.id as "all" | CourtType)}
+                className={[
+                  "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold border transition",
+                  active
+                    ? "bg-brand text-on-brand border-brand"
+                    : "bg-transparent text-primary border-default hover:border-strong hover:bg-brand-soft",
+                ].join(" ")}
+              >
+                <option.icon className="w-3.5 h-3.5" />
+                {option.label}
+              </button>
+            );
+          })}
         </div>
       </div>
-      <div className="bg-snow-white rounded-2xl p-4 shadow-sm">
-        <p className="text-base font-semibold text-main mb-3">Selecciona fecha</p>
+
+      <div className="card-soft p-4">
+        <p className="text-xs font-semibold text-muted uppercase tracking-wider mb-3">Fecha</p>
         <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={() => setWindowStart(Math.max(0, windowStart - 1))}
-            className="px-3 py-2 rounded-lg border border-stone-gray text-main"
-            aria-label="Ver dias anteriores"
+            className="inline-flex items-center justify-center w-9 h-9 rounded-lg border border-default text-primary hover:border-strong hover:bg-brand-soft transition"
+            aria-label="Días anteriores"
           >
-            ‹
+            <ChevronLeftIcon className="w-4 h-4" />
           </button>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-1">
             {visibleDates.map((date, index) => {
               const absoluteIndex = windowStart + index;
               const isToday = absoluteIndex === 0;
+              const active = selectedDateIndex === absoluteIndex;
               return (
                 <button
                   key={date.toISOString()}
                   type="button"
                   onClick={() => setSelectedDateIndex(absoluteIndex)}
-                  className={`min-w-[56px] py-2 rounded-xl text-center text-base font-semibold border transition ${
-                    selectedDateIndex === absoluteIndex
-                      ? "bg-forest-green text-snow-white border-forest-green"
-                      : "bg-snow-white text-main border-transparent"
-                  }`}
+                  className={[
+                    "flex-1 min-w-[64px] py-2 rounded-xl text-center font-semibold border transition",
+                    active
+                      ? "bg-brand text-on-brand border-brand shadow-soft"
+                      : "bg-surface text-primary border-default hover:border-strong",
+                  ].join(" ")}
                 >
-                  <span className="block">
+                  <span className="block text-xs">
                     {isToday ? "Hoy" : WEEKDAY_LABELS[date.getDay()]}
                   </span>
-                  <span className="text-lg font-bold">{date.getDate()}</span>
+                  <span className="text-lg font-bold leading-tight">{date.getDate()}</span>
                 </button>
               );
             })}
@@ -92,16 +99,13 @@ export default function FilterBar({
             type="button"
             onClick={() =>
               setWindowStart(
-                Math.min(
-                  Math.max(0, allDates.length - visibleCount),
-                  windowStart + 1
-                )
+                Math.min(Math.max(0, allDates.length - visibleCount), windowStart + 1)
               )
             }
-            className="px-3 py-2 rounded-lg border border-stone-gray text-main"
-            aria-label="Ver mas dias"
+            className="inline-flex items-center justify-center w-9 h-9 rounded-lg border border-default text-primary hover:border-strong hover:bg-brand-soft transition"
+            aria-label="Días siguientes"
           >
-            ›
+            <ChevronRightIcon className="w-4 h-4" />
           </button>
         </div>
       </div>
