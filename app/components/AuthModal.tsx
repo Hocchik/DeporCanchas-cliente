@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { XMarkIcon, SparklesIcon } from "@heroicons/react/24/solid";
 import LoginForm from "./LoginForm";
 import RegisterForm from "./RegisterForm";
 
@@ -24,56 +25,67 @@ export default function AuthModal({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-      <div className="w-full max-w-2xl rounded-2xl bg-snow-white p-6 shadow-xl">
-        <div className="flex items-start justify-between gap-4">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-4 animate-fade-in"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-xl rounded-3xl bg-surface-elev border border-default p-6 md:p-7 shadow-floating max-h-[92vh] overflow-y-auto animate-fade-in-up"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-start justify-between gap-4 mb-5">
           <div>
-            <h2 className="text-xl font-semibold text-main">{title}</h2>
-            <p className="text-sm text-main">{subtitle}</p>
+            <span className="chip mb-2 inline-flex">
+              <SparklesIcon className="w-3.5 h-3.5" />
+              {tab === "login" ? "Bienvenido de nuevo" : "Únete"}
+            </span>
+            <h2 className="font-display font-bold text-xl text-primary">
+              {tab === "login" ? title : "Crea tu cuenta"}
+            </h2>
+            <p className="text-sm text-muted mt-1">
+              {tab === "login" ? subtitle : "Es gratis. Toma menos de un minuto."}
+            </p>
           </div>
           <button
             type="button"
-            className="text-2xl text-main"
             onClick={onClose}
             aria-label="Cerrar"
+            className="inline-flex items-center justify-center w-9 h-9 rounded-full border border-default text-muted hover:text-primary hover:border-strong transition shrink-0"
           >
-            ×
+            <XMarkIcon className="w-4 h-4" />
           </button>
         </div>
 
-        <div className="mt-5 inline-flex rounded-full bg-stone-gray p-1">
-          <button
-            type="button"
-            onClick={() => setTab("login")}
-            className={`px-4 py-2 text-sm font-semibold rounded-full transition border ${
-              tab === "login"
-                ? "bg-snow-white text-main border-stone-gray"
-                : "text-main border-transparent opacity-70"
-            }`}
-          >
+        <div className="inline-flex items-center gap-1 rounded-full bg-surface-alt p-1 border border-soft mb-5">
+          <TabBtn active={tab === "login"} onClick={() => setTab("login")}>
             Iniciar sesión
-          </button>
-          <button
-            type="button"
-            onClick={() => setTab("register")}
-            className={`px-4 py-2 text-sm font-semibold rounded-full transition border ${
-              tab === "register"
-                ? "bg-snow-white text-main border-stone-gray"
-                : "text-main border-transparent opacity-70"
-            }`}
-          >
+          </TabBtn>
+          <TabBtn active={tab === "register"} onClick={() => setTab("register")}>
             Registrarse
-          </button>
+          </TabBtn>
         </div>
 
-        <div className="mt-6">
-          {tab === "login" ? (
-            <LoginForm onLogin={onAuthSuccess} redirectTo={null} />
-          ) : (
-            <RegisterForm onRegister={onAuthSuccess} redirectTo={null} />
-          )}
-        </div>
+        {tab === "login" ? (
+          <LoginForm onLogin={onAuthSuccess} redirectTo={null} />
+        ) : (
+          <RegisterForm onRegister={onAuthSuccess} redirectTo={null} />
+        )}
       </div>
     </div>
+  );
+}
+
+function TabBtn({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={[
+        "px-4 py-2 text-sm font-semibold rounded-full transition",
+        active ? "bg-surface text-brand shadow-soft" : "text-muted hover:text-primary",
+      ].join(" ")}
+    >
+      {children}
+    </button>
   );
 }

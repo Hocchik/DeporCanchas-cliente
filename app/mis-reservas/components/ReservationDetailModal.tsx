@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { ArrowDownTrayIcon, CalendarDaysIcon, ClockIcon, MapPinIcon, XMarkIcon } from "@heroicons/react/24/solid";
 import type { Reserva } from "./ReservationCard";
 
 type Props = {
@@ -40,53 +41,77 @@ export default function ReservationDetailModal({ reserva, onClose, onCancelled }
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4" onClick={onClose}>
-      <div className="w-full max-w-lg rounded-2xl bg-snow-white p-6 shadow-xl max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-start justify-between">
-          <h2 className="text-xl font-bold text-main">Detalle de reserva</h2>
-          <button type="button" onClick={onClose} aria-label="Cerrar" className="text-2xl text-main">×</button>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-4 animate-fade-in"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-lg rounded-3xl bg-surface-elev border border-default p-6 shadow-floating max-h-[90vh] overflow-y-auto animate-fade-in-up"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-start justify-between mb-5">
+          <div>
+            <p className="text-eyebrow text-brand mb-1">Reserva</p>
+            <h2 className="font-display font-bold text-xl text-primary">{cancha.nombre}</h2>
+            <p className="text-xs text-muted mt-1">ID #<span className="font-mono">{reserva.code}</span></p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Cerrar"
+            className="inline-flex items-center justify-center w-9 h-9 rounded-full border border-default text-muted hover:text-primary hover:border-strong transition"
+          >
+            <XMarkIcon className="w-4 h-4" />
+          </button>
         </div>
 
-        <div className="mt-4 space-y-2 text-sm text-main">
-          <div className="flex justify-between"><span>ID Reserva</span><span className="font-mono">#{reserva.code}</span></div>
-          <div className="flex justify-between"><span>Sede</span><span>{campus.nombre}</span></div>
-          <div className="flex justify-between"><span>Cancha</span><span>{cancha.nombre}</span></div>
-          <div className="flex justify-between"><span>Fecha</span><span>{start.toLocaleDateString("es-PE")}</span></div>
-          <div className="flex justify-between"><span>Hora</span>
-            <span>{start.getHours().toString().padStart(2,"0")}:00 - {end.getHours().toString().padStart(2,"0")}:00</span>
-          </div>
-          <div className="flex justify-between font-semibold border-t border-stone-gray pt-2">
-            <span>Total</span><span className="text-forest-green">S/{reserva.precio_total.toFixed(2)}</span>
-          </div>
+        <div className="space-y-2.5 text-sm">
+          <Row icon={<MapPinIcon className="w-4 h-4" />} text={`${campus.nombre} · ${campus.ubicacion}`} />
+          <Row icon={<CalendarDaysIcon className="w-4 h-4" />} text={start.toLocaleDateString("es-PE", { weekday: "long", day: "2-digit", month: "long", year: "numeric" })} />
+          <Row icon={<ClockIcon className="w-4 h-4" />} text={`${start.getHours().toString().padStart(2,"0")}:00 — ${end.getHours().toString().padStart(2,"0")}:00`} />
+        </div>
+
+        <div className="mt-5 border-t border-soft pt-4 flex items-center justify-between">
+          <span className="text-sm font-semibold text-muted">Total</span>
+          <span className="text-2xl font-display font-bold text-brand">S/{reserva.precio_total.toFixed(2)}</span>
         </div>
 
         {voucherUrl && (
-          <div className="mt-5">
+          <div className="mt-5 rounded-2xl bg-surface-alt border border-soft p-3">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={voucherUrl} alt="Voucher" className="mx-auto rounded-lg border border-stone-gray max-h-80" />
-            <a href={voucherUrl} download target="_blank" rel="noopener noreferrer"
-              className="mt-3 block text-center rounded-xl bg-forest-green py-3 text-snow-white font-semibold">
+            <img src={voucherUrl} alt="Voucher" className="mx-auto rounded-xl max-h-72 shadow-soft" />
+            <a
+              href={voucherUrl}
+              download
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn-primary w-full mt-3 !py-2.5"
+            >
+              <ArrowDownTrayIcon className="w-4 h-4" />
               Descargar voucher
             </a>
           </div>
         )}
 
         {puedeCancelar && (
-          <div className="mt-5 border-t border-stone-gray pt-4">
+          <div className="mt-5 border-t border-soft pt-4">
             {!confirmCancel ? (
-              <button type="button" onClick={() => setConfirmCancel(true)}
-                className="w-full rounded-xl border border-red-500 py-3 text-red-600 font-semibold">
+              <button
+                type="button"
+                onClick={() => setConfirmCancel(true)}
+                className="w-full rounded-xl border border-danger-soft bg-danger-soft py-3 text-danger font-semibold hover:opacity-90 transition"
+              >
                 Cancelar reserva
               </button>
             ) : (
               <div className="space-y-3">
-                <p className="text-sm text-main">¿Seguro que quieres cancelar esta reserva? No se puede deshacer.</p>
-                {error && <p className="text-sm text-red-600">{error}</p>}
+                <p className="text-sm text-primary">¿Seguro que quieres cancelar esta reserva? No se puede deshacer.</p>
+                {error && <p className="text-sm text-danger">{error}</p>}
                 <div className="flex gap-2">
-                  <button type="button" onClick={() => setConfirmCancel(false)} disabled={cancelling}
-                    className="flex-1 rounded-xl border border-stone-gray py-2 text-main">No</button>
-                  <button type="button" onClick={handleCancel} disabled={cancelling}
-                    className="flex-1 rounded-xl bg-red-500 py-2 text-white font-semibold disabled:opacity-50">
+                  <button type="button" onClick={() => setConfirmCancel(false)} disabled={cancelling} className="btn-secondary flex-1 !py-2.5">
+                    No, mantener
+                  </button>
+                  <button type="button" onClick={handleCancel} disabled={cancelling} className="flex-1 rounded-xl bg-red-500 text-white py-2.5 font-semibold hover:bg-red-600 disabled:opacity-50 transition">
                     {cancelling ? "Cancelando…" : "Sí, cancelar"}
                   </button>
                 </div>
@@ -95,6 +120,15 @@ export default function ReservationDetailModal({ reserva, onClose, onCancelled }
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+function Row({ icon, text }: { icon: React.ReactNode; text: string }) {
+  return (
+    <div className="flex items-center gap-2 text-muted">
+      <span className="text-brand opacity-70">{icon}</span>
+      <span className="capitalize">{text}</span>
     </div>
   );
 }

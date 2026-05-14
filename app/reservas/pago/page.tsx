@@ -127,32 +127,30 @@ function PagoPage() {
 
   return (
     <PageWrap>
-      <section className="max-w-6xl mx-auto px-4 py-10 w-full flex-1">
-        <div className="flex items-center justify-between gap-4 flex-wrap">
+      <section className="max-w-6xl mx-auto px-4 md:px-6 py-8 md:py-12 w-full flex-1">
+        <div className="flex items-end justify-between gap-4 flex-wrap mb-8">
           <div>
-            <p className="text-xs uppercase tracking-widest text-main">Paso final</p>
-            <h1 className="text-3xl md:text-4xl font-bold text-main">Confirmación de Pago</h1>
+            <p className="text-eyebrow text-brand mb-2">Paso final</p>
+            <h1 className="text-display-lg">Confirmación de pago</h1>
+            <p className="text-muted text-sm mt-2">Elige cómo quieres pagar para asegurar tu cancha.</p>
           </div>
           <CountdownTimer expiresAt={data.expires_at} onExpire={() => router.push("/reservas?expired=1")} />
         </div>
 
-        <div className="mt-8 grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-6">
           <div>
-            <div className="inline-flex rounded-full bg-stone-gray p-1">
-              <button type="button" onClick={() => setMethod("wallet")}
-                className={`px-4 py-2 text-sm font-semibold rounded-full transition border ${
-                  method === "wallet" ? "bg-snow-white text-main border-stone-gray" : "text-main border-transparent opacity-70"
-                }`}>Billetera Digital (Yape/Plin)</button>
-              <button type="button" onClick={() => setMethod("card")}
-                className={`px-4 py-2 text-sm font-semibold rounded-full transition border ${
-                  method === "card" ? "bg-snow-white text-main border-stone-gray" : "text-main border-transparent opacity-70"
-                }`}>Credit/Debit Card</button>
+            <div className="inline-flex items-center gap-1 rounded-full bg-surface-alt p-1 border border-soft mb-5">
+              <MethodBtn active={method === "wallet"} onClick={() => setMethod("wallet")}>
+                Yape / Plin
+              </MethodBtn>
+              <MethodBtn active={method === "card"} onClick={() => setMethod("card")}>
+                Tarjeta
+              </MethodBtn>
             </div>
-            <div className="mt-6">
-              {method === "wallet"
-                ? <YapePaymentForm onSubmit={handleYape} disabled={modal.kind === "processing"} />
-                : <CardPaymentForm onSubmit={handleCard} disabled={modal.kind === "processing"} />}
-            </div>
+
+            {method === "wallet"
+              ? <YapePaymentForm onSubmit={handleYape} disabled={modal.kind === "processing"} />
+              : <CardPaymentForm onSubmit={handleCard} disabled={modal.kind === "processing"} />}
           </div>
 
           <ReservationSummary
@@ -175,12 +173,26 @@ function PagoPage() {
   );
 }
 
+function MethodBtn({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={[
+        "px-4 py-2 text-sm font-semibold rounded-full transition",
+        active
+          ? "bg-surface text-brand shadow-soft"
+          : "text-muted hover:text-primary",
+      ].join(" ")}
+    >
+      {children}
+    </button>
+  );
+}
+
 function PageWrap({ children }: { children: React.ReactNode }) {
   return (
-    <main
-      className="min-h-screen text-base flex flex-col"
-      style={{ backgroundColor: "#FBF9F5", ["--grass-green" as string]: "#84C940" } as React.CSSProperties}
-    >
+    <main className="min-h-screen text-base flex flex-col bg-app">
       <Navbar />
       {children}
       <Footer />

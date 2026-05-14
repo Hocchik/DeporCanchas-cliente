@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { CreditCardIcon, LockClosedIcon, ShieldCheckIcon } from "@heroicons/react/24/solid";
 
 export type CardFormValues = {
   titular_nombre: string;
@@ -31,6 +32,13 @@ function formatExp(v: string) {
   if (d.length <= 2) return d;
   return `${d.slice(0, 2)}/${d.slice(2)}`;
 }
+function brandFromNumber(numero: string): string {
+  const n = numero.replace(/\s/g, "");
+  if (n.startsWith("4")) return "VISA";
+  if (/^5[1-5]/.test(n) || /^2(2[2-9]|[3-6]|7[01]|720)/.test(n)) return "MASTERCARD";
+  if (/^3[47]/.test(n)) return "AMEX";
+  return "";
+}
 
 export default function CardPaymentForm({ onSubmit, disabled }: Props) {
   const [v, setV] = useState<CardFormValues>(initial);
@@ -38,6 +46,7 @@ export default function CardPaymentForm({ onSubmit, disabled }: Props) {
 
   function setField<K extends keyof CardFormValues>(k: K, val: string) {
     setV((prev) => ({ ...prev, [k]: val }));
+    if (errors[k]) setErrors((prev) => ({ ...prev, [k]: undefined }));
   }
 
   function validate(): boolean {
@@ -67,57 +76,60 @@ export default function CardPaymentForm({ onSubmit, disabled }: Props) {
     await onSubmit({ ...v, numero: v.numero.replace(/\s/g, "") });
   }
 
+  const brand = brandFromNumber(v.numero);
+
   return (
-    <div className="rounded-2xl bg-snow-white p-6 shadow-sm">
+    <div className="card-soft p-5 md:p-6">
+      <div className="flex items-center gap-2 mb-5">
+        <CreditCardIcon className="w-5 h-5 text-brand" />
+        <h3 className="font-display font-semibold text-base text-primary">Datos de tarjeta</h3>
+        <span className="ml-auto inline-flex items-center gap-1 text-xs text-muted">
+          <ShieldCheckIcon className="w-3.5 h-3.5" />
+          Pago seguro
+        </span>
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Field label="Nombre del titular" error={errors.titular_nombre} className="md:col-span-2">
-          <input type="text" value={v.titular_nombre}
-            onChange={(e) => setField("titular_nombre", e.target.value)}
-            className="w-full rounded-xl border border-stone-gray bg-stone-gray/30 px-4 py-3 text-main"
-            placeholder="Nombre completo" />
+          <Input value={v.titular_nombre} onChange={(s) => setField("titular_nombre", s)} placeholder="Nombre completo" />
         </Field>
         <Field label="DNI" error={errors.titular_dni}>
-          <input type="text" inputMode="numeric" maxLength={8} value={v.titular_dni}
-            onChange={(e) => setField("titular_dni", e.target.value.replace(/\D/g, ""))}
-            className="w-full rounded-xl border border-stone-gray bg-stone-gray/30 px-4 py-3 text-main"
-            placeholder="DNI 8 dígitos" />
+          <Input value={v.titular_dni} onChange={(s) => setField("titular_dni", s.replace(/\D/g, "").slice(0, 8))} placeholder="DNI 8 dígitos" inputMode="numeric" maxLength={8} />
         </Field>
         <Field label="Fecha de nacimiento" error={errors.titular_fecha_nacimiento}>
-          <input type="date" value={v.titular_fecha_nacimiento}
-            onChange={(e) => setField("titular_fecha_nacimiento", e.target.value)}
-            className="w-full rounded-xl border border-stone-gray bg-stone-gray/30 px-4 py-3 text-main" />
+          <Input type="date" value={v.titular_fecha_nacimiento} onChange={(s) => setField("titular_fecha_nacimiento", s)} />
         </Field>
         <Field label="Dirección" error={errors.titular_direccion} className="md:col-span-2">
-          <input type="text" value={v.titular_direccion}
-            onChange={(e) => setField("titular_direccion", e.target.value)}
-            className="w-full rounded-xl border border-stone-gray bg-stone-gray/30 px-4 py-3 text-main"
-            placeholder="Dirección completa" />
+          <Input value={v.titular_direccion} onChange={(s) => setField("titular_direccion", s)} placeholder="Av. Test 123, Lima" />
         </Field>
+
         <Field label="Número de tarjeta" error={errors.numero} className="md:col-span-2">
-          <input type="text" inputMode="numeric" value={v.numero}
-            onChange={(e) => setField("numero", formatNumero(e.target.value))}
-            className="w-full rounded-xl border border-stone-gray bg-stone-gray/30 px-4 py-3 text-main"
-            placeholder="0000 0000 0000 0000" />
+          <div className="relative">
+            <Input value={v.numero} onChange={(s) => setField("numero", formatNumero(s))} placeholder="0000 0000 0000 0000" inputMode="numeric" />
+            {brand && (
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-brand bg-brand-soft px-2 py-1 rounded-md">
+                {brand}
+              </span>
+            )}
+          </div>
         </Field>
-        <Field label="Fecha de expiración" error={errors.expiracion}>
-          <input type="text" inputMode="numeric" value={v.expiracion}
-            onChange={(e) => setField("expiracion", formatExp(e.target.value))}
-            className="w-full rounded-xl border border-stone-gray bg-stone-gray/30 px-4 py-3 text-main"
-            placeholder="MM/AA" />
+        <Field label="Expiración" error={errors.expiracion}>
+          <Input value={v.expiracion} onChange={(s) => setField("expiracion", formatExp(s))} placeholder="MM/AA" inputMode="numeric" />
         </Field>
         <Field label="CVV" error={errors.cvv}>
-          <input type="password" inputMode="numeric" maxLength={3} value={v.cvv}
-            onChange={(e) => setField("cvv", e.target.value.replace(/\D/g, ""))}
-            className="w-full rounded-xl border border-stone-gray bg-stone-gray/30 px-4 py-3 text-main"
-            placeholder="***" />
+          <div className="relative">
+            <Input type="password" value={v.cvv} onChange={(s) => setField("cvv", s.replace(/\D/g, "").slice(0, 3))} placeholder="•••" inputMode="numeric" maxLength={3} />
+            <LockClosedIcon className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-soft" />
+          </div>
         </Field>
       </div>
+
       <div className="mt-6 flex flex-wrap gap-3">
-        <button type="button" onClick={() => { setV(initial); setErrors({}); }}
-          className="rounded-xl bg-stone-gray px-6 py-3 text-main">Limpiar</button>
-        <button type="button" disabled={disabled} onClick={handleSubmit}
-          className="rounded-xl bg-forest-green px-6 py-3 text-snow-white font-semibold disabled:opacity-50">
-          Realizar Pago →
+        <button type="button" onClick={() => { setV(initial); setErrors({}); }} className="btn-secondary !py-2.5 !px-5">
+          Limpiar
+        </button>
+        <button type="button" disabled={disabled} onClick={handleSubmit} className="btn-primary flex-1 disabled:opacity-50 disabled:cursor-not-allowed">
+          Realizar pago →
         </button>
       </div>
     </div>
@@ -127,9 +139,25 @@ export default function CardPaymentForm({ onSubmit, disabled }: Props) {
 function Field({ label, error, className, children }: { label: string; error?: string; className?: string; children: React.ReactNode }) {
   return (
     <div className={className}>
-      <label className="block text-sm text-main mb-2">{label}</label>
+      <label className="block text-xs font-semibold text-primary mb-1.5">{label}</label>
       {children}
-      {error && <p className="text-red-600 text-xs mt-1">{error}</p>}
+      {error && <p className="text-danger text-xs mt-1.5 ml-1">{error}</p>}
     </div>
+  );
+}
+
+type InputProps = Omit<React.InputHTMLAttributes<HTMLInputElement>, "onChange" | "value"> & {
+  value: string;
+  onChange: (s: string) => void;
+};
+
+function Input({ onChange, value, ...rest }: InputProps) {
+  return (
+    <input
+      {...rest}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      className="w-full rounded-xl border border-default bg-surface-alt focus:bg-surface focus:border-strong outline-none px-4 py-3 text-primary placeholder:text-soft transition"
+    />
   );
 }
