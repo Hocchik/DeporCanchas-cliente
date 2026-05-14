@@ -73,9 +73,8 @@ const Navbar = () => {
                   className="absolute right-0 mt-2 w-56 rounded-xl bg-surface-elev border border-default shadow-elevated overflow-hidden p-1.5 z-50"
                   role="menu"
                 >
-                  <MenuItem href="/reservas" onClick={() => setIsMenuOpen(false)}>Reservar ahora</MenuItem>
-                  <MenuItem href="/mis-reservas" onClick={() => setIsMenuOpen(false)}>Mis reservas</MenuItem>
                   <MenuItem href="/perfil" onClick={() => setIsMenuOpen(false)}>Mi perfil</MenuItem>
+                  <MenuItem href="/mis-reservas" onClick={() => setIsMenuOpen(false)}>Mis reservas</MenuItem>
                   <div className="my-1 border-t border-soft" />
                   <button
                     type="button"

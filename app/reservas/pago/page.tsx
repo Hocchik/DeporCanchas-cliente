@@ -1,6 +1,6 @@
 "use client";
 
-import React, { Suspense, useEffect, useMemo, useState } from "react";
+import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Navbar from "../../components/Navbar";
 import Footer from "../../components/Footer";
@@ -9,6 +9,7 @@ import PaymentProcessingModal, { type PaymentModalState } from "./components/Pay
 import YapePaymentForm from "./components/YapePaymentForm";
 import CardPaymentForm, { type CardFormValues } from "./components/CardPaymentForm";
 import ReservationSummary from "./components/ReservationSummary";
+import ConfirmExitModal from "./components/ConfirmExitModal";
 
 type ReservaResp = {
   reserva: {
@@ -57,6 +58,13 @@ function PagoPage() {
   const [method, setMethod] = useState<"wallet" | "card">("wallet");
   const [modal, setModal] = useState<PaymentModalState>({ kind: "hidden" });
 
+  // Guard state
+  const paidRef = useRef(false);              // true cuando el pago se completó (no se cancela al salir)
+  const codeRef = useRef<string | null>(null); // para usar en cleanups async
+  const [exitTo, setExitTo] = useState<string | "back" | null>(null);
+  const [exitBusy, setExitBusy] = useState(false);
+
+  // Carga inicial de la reserva
   useEffect(() => {
     if (!code) { router.push("/reservas"); return; }
     (async () => {
@@ -68,15 +76,94 @@ function PagoPage() {
         router.push("/reservas?expired=1"); return;
       }
       setData(json.reserva);
+      codeRef.current = json.reserva.code;
     })();
   }, [code, router]);
+
+  // Helper: cancelar reserva (best-effort, idempotente)
+  const abandonReserva = useCallback(async (sync = false) => {
+    const c = codeRef.current;
+    if (!c) return;
+    const url = `/api/reservas/by-code/${c}/abandon`;
+    if (sync && typeof navigator !== "undefined" && "sendBeacon" in navigator) {
+      try { navigator.sendBeacon(url); return; } catch {}
+    }
+    try { await fetch(url, { method: "POST", keepalive: true }); } catch {}
+  }, []);
+
+  // 1) Cleanup al desmontar el componente: si no se pagó, abandonar
+  useEffect(() => {
+    return () => {
+      if (!paidRef.current) abandonReserva(true);
+    };
+  }, [abandonReserva]);
+
+  // 2) beforeunload: refresh / cerrar pestaña / escribir nueva URL
+  useEffect(() => {
+    const handler = (e: BeforeUnloadEvent) => {
+      if (paidRef.current || !codeRef.current) return;
+      e.preventDefault();
+      e.returnValue = "";
+      // sendBeacon es la única forma confiable durante unload
+      abandonReserva(true);
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [abandonReserva]);
+
+  // 3) Interceptar clicks en <a> internos (navbar, footer, links)
+  useEffect(() => {
+    const onClick = (e: MouseEvent) => {
+      if (paidRef.current || !codeRef.current) return;
+      if (e.defaultPrevented) return;
+      if (e.button !== 0) return; // solo click izquierdo
+      if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return; // dejar abrir en pestaña nueva
+      const target = (e.target as HTMLElement)?.closest?.("a") as HTMLAnchorElement | null;
+      if (!target) return;
+      const href = target.getAttribute("href");
+      if (!href) return;
+      if (target.target === "_blank") return;
+      if (href.startsWith("#") || href.startsWith("mailto:") || href.startsWith("tel:")) return;
+      // Si es la propia URL, no interceptar
+      const currentPath = window.location.pathname + window.location.search;
+      if (href === currentPath || href === window.location.pathname) return;
+      // Solo internos
+      let url = href;
+      if (href.startsWith("http")) {
+        try {
+          const u = new URL(href);
+          if (u.origin !== window.location.origin) return; // externo → dejar pasar
+          url = u.pathname + u.search + u.hash;
+        } catch { return; }
+      }
+      e.preventDefault();
+      e.stopPropagation();
+      setExitTo(url);
+    };
+    document.addEventListener("click", onClick, true);
+    return () => document.removeEventListener("click", onClick, true);
+  }, []);
+
+  // 4) Trampa para botón atrás del navegador
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    // Empuja un estado dummy para que el botón "atrás" dispare popstate sin abandonar la página
+    window.history.pushState({ guard: true }, "");
+    const handler = () => {
+      if (paidRef.current || !codeRef.current) return;
+      window.history.pushState({ guard: true }, ""); // re-empujar para neutralizar
+      setExitTo("back");
+    };
+    window.addEventListener("popstate", handler);
+    return () => window.removeEventListener("popstate", handler);
+  }, []);
 
   const start = useMemo(() => data ? new Date(data.fecha_empieza) : null, [data]);
   const end = useMemo(() => data ? new Date(data.fecha_termina) : null, [data]);
   const slots = useMemo(() => start && end ? buildSlots(start, end) : [], [start, end]);
 
-  if (loadError) return <PageWrap><p className="p-8">{loadError}</p></PageWrap>;
-  if (!data || !start || !end) return <PageWrap><p className="p-8">Cargando…</p></PageWrap>;
+  if (loadError) return <PageWrap><p className="p-8 text-danger">{loadError}</p></PageWrap>;
+  if (!data || !start || !end) return <PageWrap><p className="p-8 text-muted">Cargando…</p></PageWrap>;
 
   const handleYape = async (file: File) => {
     setModal({ kind: "processing" });
@@ -105,6 +192,7 @@ function PagoPage() {
       alert(`Error al procesar el pago: ${j.error ?? "desconocido"}`);
       return;
     }
+    paidRef.current = true; // ya no debemos cancelar al salir
     const out = await res.json();
     setModal({
       kind: "success",
@@ -115,12 +203,33 @@ function PagoPage() {
       fecha: start!.toLocaleDateString("es-PE"),
       metodoPago: method === "wallet" ? "Billetera Digital" : "Tarjeta",
       horarios: slots.map((s) => ({
-        label: `${s} - ${String(Number(s.slice(0,2)) + 1).padStart(2, "0")}:${s.slice(3)}`,
+        label: `${s} - ${String(Number(s.slice(0, 2)) + 1).padStart(2, "0")}:${s.slice(3)}`,
         precio: data!.precio_total / slots.length,
       })),
       total: data!.precio_total,
     });
   }
+
+  const handleTimerExpire = async () => {
+    if (paidRef.current) return;
+    paidRef.current = true; // marcar para no disparar el guard al navegar
+    await abandonReserva(false);
+    router.push("/reservas?expired=1");
+  };
+
+  const cancelExit = () => setExitTo(null);
+  const confirmExit = async () => {
+    if (!exitTo) return;
+    setExitBusy(true);
+    await abandonReserva(false);
+    paidRef.current = true; // evitar el cleanup secundario
+    setExitBusy(false);
+    if (exitTo === "back") {
+      router.push("/reservas");
+    } else {
+      router.push(exitTo);
+    }
+  };
 
   const cancha = data.canchas_deportivas;
   const campus = cancha.campus;
@@ -134,7 +243,7 @@ function PagoPage() {
             <h1 className="text-display-lg">Confirmación de pago</h1>
             <p className="text-muted text-sm mt-2">Elige cómo quieres pagar para asegurar tu cancha.</p>
           </div>
-          <CountdownTimer expiresAt={data.expires_at} onExpire={() => router.push("/reservas?expired=1")} />
+          <CountdownTimer expiresAt={data.expires_at} onExpire={handleTimerExpire} />
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-6">
@@ -168,6 +277,13 @@ function PagoPage() {
       <PaymentProcessingModal
         state={modal}
         onVolver={() => router.push("/mis-reservas")}
+      />
+
+      <ConfirmExitModal
+        open={exitTo !== null}
+        onCancel={cancelExit}
+        onConfirm={confirmExit}
+        busy={exitBusy}
       />
     </PageWrap>
   );
