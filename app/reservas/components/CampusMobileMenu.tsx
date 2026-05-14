@@ -21,10 +21,7 @@ export default function CampusMobileMenu({ campuses, selectedCampusId, isOpen, o
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm animate-fade-in" onClick={onClose} />
       <div className="relative mx-auto mt-16 w-[92%] max-w-sm rounded-2xl bg-surface-elev border border-default p-5 shadow-floating animate-fade-in-up">
         <div className="flex items-center justify-between mb-4">
-          <div>
-            <p className="text-eyebrow text-brand mb-1">Sedes</p>
-            <h2 className="font-display font-semibold text-lg text-primary">Nuestros campus</h2>
-          </div>
+          <h2 className="font-display font-semibold text-lg text-primary">Sedes</h2>
           <button
             type="button"
             onClick={onClose}
@@ -34,7 +31,6 @@ export default function CampusMobileMenu({ campuses, selectedCampusId, isOpen, o
             <XMarkIcon className="w-4 h-4" />
           </button>
         </div>
-        <p className="text-sm text-muted mb-4">Elige tu campus preferido</p>
         <div className="space-y-1.5">
           {campuses.map((campus) => {
             const active = selectedCampusId === campus.id;
