@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { ArrowRightOnRectangleIcon, CheckCircleIcon, ChevronDownIcon, IdentificationIcon } from "@heroicons/react/24/solid";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import { useSession } from "../contexts/SessionContext";
@@ -12,12 +13,12 @@ export default function PerfilPage() {
 
   const [datos, setDatos] = useState({ nombre: "", email: "", celular: "" });
   const [savingDatos, setSavingDatos] = useState(false);
-  const [datosMsg, setDatosMsg] = useState("");
+  const [datosMsg, setDatosMsg] = useState<{ kind: "ok" | "error"; text: string } | null>(null);
 
   const [showPwd, setShowPwd] = useState(false);
   const [pwd, setPwd] = useState({ actual: "", nueva: "", confirmar: "" });
   const [savingPwd, setSavingPwd] = useState(false);
-  const [pwdMsg, setPwdMsg] = useState("");
+  const [pwdMsg, setPwdMsg] = useState<{ kind: "ok" | "error"; text: string } | null>(null);
 
   useEffect(() => {
     if (!loading && !user) router.push("/login?next=/perfil");
@@ -29,9 +30,11 @@ export default function PerfilPage() {
 
   if (loading || !user) return null;
 
+  const initials = user.nombre.split(" ").map((s) => s[0]).slice(0, 2).join("").toUpperCase();
+
   async function saveDatos() {
     setSavingDatos(true);
-    setDatosMsg("");
+    setDatosMsg(null);
     const res = await fetch("/api/perfil", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -39,18 +42,18 @@ export default function PerfilPage() {
     });
     setSavingDatos(false);
     if (res.ok) {
-      setDatosMsg("Datos actualizados");
+      setDatosMsg({ kind: "ok", text: "Datos actualizados" });
       refresh();
     } else {
       const j = await res.json().catch(() => ({}));
-      setDatosMsg(j.error === "email_ya_usado" ? "Ese email ya está en uso" : "Error al actualizar");
+      setDatosMsg({ kind: "error", text: j.error === "email_ya_usado" ? "Ese email ya está en uso" : "Error al actualizar" });
     }
   }
 
   async function savePwd() {
-    setPwdMsg("");
-    if (pwd.nueva !== pwd.confirmar) { setPwdMsg("Las claves no coinciden"); return; }
-    if (pwd.nueva.length < 8) { setPwdMsg("Clave nueva debe tener al menos 8 caracteres"); return; }
+    setPwdMsg(null);
+    if (pwd.nueva !== pwd.confirmar) { setPwdMsg({ kind: "error", text: "Las claves no coinciden" }); return; }
+    if (pwd.nueva.length < 8) { setPwdMsg({ kind: "error", text: "Mínimo 8 caracteres" }); return; }
     setSavingPwd(true);
     const res = await fetch("/api/perfil/clave", {
       method: "PATCH",
@@ -59,101 +62,168 @@ export default function PerfilPage() {
     });
     setSavingPwd(false);
     if (res.ok) {
-      setPwdMsg("Clave actualizada");
+      setPwdMsg({ kind: "ok", text: "Clave actualizada" });
       setPwd({ actual: "", nueva: "", confirmar: "" });
       setShowPwd(false);
     } else {
       const j = await res.json().catch(() => ({}));
-      setPwdMsg(j.error === "clave_actual_invalida" ? "Clave actual incorrecta" : "Error al actualizar");
+      setPwdMsg({ kind: "error", text: j.error === "clave_actual_invalida" ? "Clave actual incorrecta" : "Error al actualizar" });
     }
   }
 
   return (
-    <main className="min-h-screen flex flex-col" style={{ backgroundColor: "#FBF9F5" }}>
+    <main className="min-h-screen flex flex-col bg-app">
       <Navbar />
-      <section className="max-w-xl mx-auto px-4 py-10 w-full flex-1">
+      <section className="flex-1 max-w-2xl mx-auto px-4 md:px-6 py-8 md:py-12 w-full">
+        {/* Header */}
         <div className="flex items-center gap-4 mb-8">
-          <div className="h-16 w-16 rounded-full bg-forest-green text-snow-white flex items-center justify-center text-2xl font-bold">
-            {user.nombre.slice(0, 2).toUpperCase()}
+          <div className="relative">
+            <div className="h-16 w-16 rounded-2xl bg-brand text-on-brand flex items-center justify-center text-xl font-display font-bold shadow-card">
+              {initials}
+            </div>
+            <span className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-accent border-2 border-app flex items-center justify-center">
+              <CheckCircleIcon className="w-3 h-3 text-brand" />
+            </span>
           </div>
-          <h1 className="text-2xl font-bold text-main">Mi Perfil</h1>
+          <div>
+            <p className="text-eyebrow text-brand mb-1">Mi cuenta</p>
+            <h1 className="text-display-md text-primary">{user.nombre}</h1>
+            <p className="text-sm text-muted">{user.email}</p>
+          </div>
         </div>
 
-        <section className="rounded-2xl bg-snow-white p-6 shadow-sm mb-6">
-          <h2 className="font-semibold text-main mb-4">Datos personales</h2>
-          <div className="space-y-3">
+        {/* Datos personales */}
+        <Section title="Datos personales" subtitle="Mantén tu información al día.">
+          <div className="space-y-4">
             <Field label="Nombre">
-              <input value={datos.nombre} onChange={(e) => setDatos({ ...datos, nombre: e.target.value })}
-                className="w-full rounded-xl border border-stone-gray bg-stone-gray/30 px-4 py-3 text-main" />
+              <Input value={datos.nombre} onChange={(s) => setDatos({ ...datos, nombre: s })} placeholder="Tu nombre" />
             </Field>
             <Field label="Email">
-              <input type="email" value={datos.email} onChange={(e) => setDatos({ ...datos, email: e.target.value })}
-                className="w-full rounded-xl border border-stone-gray bg-stone-gray/30 px-4 py-3 text-main" />
+              <Input type="email" value={datos.email} onChange={(s) => setDatos({ ...datos, email: s })} placeholder="tu@email.com" />
             </Field>
-            <Field label="DNI">
-              <input value={user.dni ?? "(no registrado)"} disabled
-                className="w-full rounded-xl border border-stone-gray bg-stone-gray/10 px-4 py-3 text-main opacity-60" />
-              <p className="text-xs text-main mt-1 opacity-70">El DNI se registra automáticamente cuando pagas con tarjeta.</p>
+            <Field
+              label="DNI"
+              hint="Se registra automáticamente cuando pagas con tarjeta."
+            >
+              <div className="flex items-center gap-3 rounded-xl border border-default bg-surface-alt opacity-70 px-4 py-3">
+                <IdentificationIcon className="w-4 h-4 text-brand opacity-70" />
+                <span className="text-primary font-mono">{user.dni ?? "—"}</span>
+              </div>
             </Field>
             <Field label="Celular">
-              <input inputMode="numeric" value={datos.celular} onChange={(e) => setDatos({ ...datos, celular: e.target.value.replace(/\D/g, "").slice(0, 9) })}
-                className="w-full rounded-xl border border-stone-gray bg-stone-gray/30 px-4 py-3 text-main" />
+              <Input
+                inputMode="numeric"
+                value={datos.celular}
+                onChange={(s) => setDatos({ ...datos, celular: s.replace(/\D/g, "").slice(0, 9) })}
+                placeholder="987654321"
+                maxLength={9}
+              />
             </Field>
-            {datosMsg && <p className="text-sm text-main">{datosMsg}</p>}
-            <button type="button" onClick={saveDatos} disabled={savingDatos}
-              className="rounded-xl bg-forest-green px-6 py-3 text-snow-white font-semibold disabled:opacity-50">
-              Guardar cambios
+            {datosMsg && (
+              <p className={`text-sm ${datosMsg.kind === "ok" ? "text-brand" : "text-danger"}`}>
+                {datosMsg.text}
+              </p>
+            )}
+            <button type="button" onClick={saveDatos} disabled={savingDatos} className="btn-primary disabled:opacity-50">
+              {savingDatos ? "Guardando…" : "Guardar cambios"}
             </button>
           </div>
-        </section>
+        </Section>
 
-        <section className="rounded-2xl bg-snow-white p-6 shadow-sm mb-6">
-          <button type="button" onClick={() => setShowPwd((s) => !s)}
-            className="w-full text-left font-semibold text-main">
-            Cambiar clave {showPwd ? "▲" : "▼"}
-          </button>
+        {/* Cambiar clave */}
+        <Section
+          title="Seguridad"
+          subtitle="Actualiza tu clave de acceso."
+          collapsibleHeader={
+            <button
+              type="button"
+              onClick={() => setShowPwd((s) => !s)}
+              className="inline-flex items-center gap-1.5 text-sm font-semibold text-brand hover:underline"
+            >
+              {showPwd ? "Ocultar" : "Cambiar clave"}
+              <ChevronDownIcon className={`w-4 h-4 transition-transform ${showPwd ? "rotate-180" : ""}`} />
+            </button>
+          }
+        >
           {showPwd && (
-            <div className="space-y-3 mt-4">
+            <div className="space-y-4">
               <Field label="Clave actual">
-                <input type="password" value={pwd.actual} onChange={(e) => setPwd({ ...pwd, actual: e.target.value })}
-                  className="w-full rounded-xl border border-stone-gray bg-stone-gray/30 px-4 py-3 text-main" />
+                <Input type="password" value={pwd.actual} onChange={(s) => setPwd({ ...pwd, actual: s })} />
               </Field>
-              <Field label="Clave nueva">
-                <input type="password" value={pwd.nueva} onChange={(e) => setPwd({ ...pwd, nueva: e.target.value })}
-                  className="w-full rounded-xl border border-stone-gray bg-stone-gray/30 px-4 py-3 text-main" />
+              <Field label="Clave nueva" hint="Mínimo 8 caracteres.">
+                <Input type="password" value={pwd.nueva} onChange={(s) => setPwd({ ...pwd, nueva: s })} />
               </Field>
               <Field label="Confirmar clave nueva">
-                <input type="password" value={pwd.confirmar} onChange={(e) => setPwd({ ...pwd, confirmar: e.target.value })}
-                  className="w-full rounded-xl border border-stone-gray bg-stone-gray/30 px-4 py-3 text-main" />
+                <Input type="password" value={pwd.confirmar} onChange={(s) => setPwd({ ...pwd, confirmar: s })} />
               </Field>
-              {pwdMsg && <p className="text-sm text-main">{pwdMsg}</p>}
-              <button type="button" onClick={savePwd} disabled={savingPwd}
-                className="rounded-xl bg-forest-green px-6 py-3 text-snow-white font-semibold disabled:opacity-50">
-                Actualizar clave
+              {pwdMsg && (
+                <p className={`text-sm ${pwdMsg.kind === "ok" ? "text-brand" : "text-danger"}`}>
+                  {pwdMsg.text}
+                </p>
+              )}
+              <button type="button" onClick={savePwd} disabled={savingPwd} className="btn-primary disabled:opacity-50">
+                {savingPwd ? "Guardando…" : "Actualizar clave"}
               </button>
             </div>
           )}
-        </section>
+        </Section>
 
-        <section className="rounded-2xl bg-snow-white p-6 shadow-sm">
-          <h2 className="font-semibold text-main mb-4">Cuenta</h2>
-          <button type="button"
+        {/* Cuenta */}
+        <Section title="Cuenta" subtitle="Cierra tu sesión actual.">
+          <button
+            type="button"
             onClick={async () => { await logout(); router.push("/"); }}
-            className="rounded-xl border border-red-500 px-6 py-3 text-red-600 font-semibold">
+            className="inline-flex items-center gap-2 rounded-xl border border-danger-soft bg-danger-soft px-5 py-3 text-danger font-semibold hover:opacity-90 transition"
+          >
+            <ArrowRightOnRectangleIcon className="w-4 h-4" />
             Cerrar sesión
           </button>
-        </section>
+        </Section>
       </section>
       <Footer />
     </main>
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Section({ title, subtitle, collapsibleHeader, children }: {
+  title: string; subtitle?: string; collapsibleHeader?: React.ReactNode; children: React.ReactNode;
+}) {
+  return (
+    <section className="card-soft p-6 mb-5">
+      <div className="flex items-start justify-between gap-3 mb-4">
+        <div>
+          <h2 className="font-display font-semibold text-lg text-primary">{title}</h2>
+          {subtitle && <p className="text-sm text-muted mt-0.5">{subtitle}</p>}
+        </div>
+        {collapsibleHeader}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
   return (
     <div>
-      <label className="block text-sm text-main mb-2">{label}</label>
+      <label className="block text-xs font-semibold text-primary mb-1.5">{label}</label>
       {children}
+      {hint && <p className="text-xs text-soft mt-1.5 ml-1">{hint}</p>}
     </div>
+  );
+}
+
+type InputProps = Omit<React.InputHTMLAttributes<HTMLInputElement>, "onChange" | "value"> & {
+  value: string;
+  onChange: (s: string) => void;
+};
+
+function Input({ value, onChange, ...rest }: InputProps) {
+  return (
+    <input
+      {...rest}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      className="w-full rounded-xl border border-default bg-surface-alt focus:bg-surface focus:border-strong outline-none px-4 py-3 text-primary placeholder:text-soft transition"
+    />
   );
 }

@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { CalendarDaysIcon } from "@heroicons/react/24/solid";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import { useSession } from "../contexts/SessionContext";
@@ -9,6 +10,12 @@ import ReservationCard, { type Reserva } from "./components/ReservationCard";
 import ReservationDetailModal from "./components/ReservationDetailModal";
 
 type Filter = "proximas" | "pasadas" | "canceladas";
+
+const FILTER_LABELS: Record<Filter, string> = {
+  proximas: "Próximas",
+  pasadas: "Pasadas",
+  canceladas: "Canceladas",
+};
 
 export default function MisReservasPage() {
   const router = useRouter();
@@ -39,26 +46,65 @@ export default function MisReservasPage() {
   if (loading || !user) return null;
 
   return (
-    <main className="min-h-screen flex flex-col" style={{ backgroundColor: "#FBF9F5" }}>
+    <main className="min-h-screen flex flex-col bg-app">
       <Navbar />
-      <section className="max-w-5xl mx-auto px-4 py-10 w-full flex-1">
-        <h1 className="text-3xl font-bold text-main mb-6">Mis Reservas</h1>
+      <section className="flex-1 max-w-5xl mx-auto px-4 md:px-6 py-8 md:py-12 w-full">
+        <div className="mb-8">
+          <p className="text-eyebrow text-brand mb-2">Tu actividad</p>
+          <h1 className="text-display-lg">Mis reservas</h1>
+          <p className="text-muted text-sm mt-2">
+            Revisa, descarga el voucher o cancela tus reservas (hasta 24h antes).
+          </p>
+        </div>
 
-        <div className="inline-flex rounded-full bg-stone-gray p-1 mb-6">
-          {(["proximas", "pasadas", "canceladas"] as Filter[]).map((f) => (
-            <button key={f} type="button" onClick={() => setFilter(f)}
-              className={`px-4 py-2 text-sm font-semibold rounded-full transition border ${
-                filter === f ? "bg-snow-white text-main border-stone-gray" : "text-main border-transparent opacity-70"
-              }`}>
-              {f === "proximas" ? "Próximas" : f === "pasadas" ? "Pasadas" : "Canceladas"}
+        <div className="inline-flex items-center gap-1 rounded-full bg-surface-alt p-1 border border-soft mb-6">
+          {(Object.keys(FILTER_LABELS) as Filter[]).map((f) => (
+            <button
+              key={f}
+              type="button"
+              onClick={() => setFilter(f)}
+              className={[
+                "px-4 py-2 text-sm font-semibold rounded-full transition",
+                filter === f ? "bg-surface text-brand shadow-soft" : "text-muted hover:text-primary",
+              ].join(" ")}
+            >
+              {FILTER_LABELS[f]}
             </button>
           ))}
         </div>
 
         {loadingList ? (
-          <p className="text-main">Cargando…</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {[0, 1].map((i) => (
+              <div key={i} className="card-soft p-4 flex gap-4 animate-pulse-soft">
+                <div className="h-24 w-32 rounded-xl bg-surface-alt" />
+                <div className="flex-1 space-y-2">
+                  <div className="h-4 w-2/3 rounded bg-surface-alt" />
+                  <div className="h-3 w-1/2 rounded bg-surface-alt" />
+                  <div className="h-3 w-1/3 rounded bg-surface-alt" />
+                </div>
+              </div>
+            ))}
+          </div>
         ) : reservas.length === 0 ? (
-          <p className="text-main">No tienes reservas en esta categoría.</p>
+          <div className="card-soft p-10 text-center">
+            <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-accent text-brand mb-4">
+              <CalendarDaysIcon className="w-7 h-7" />
+            </div>
+            <p className="font-display font-semibold text-lg text-primary mb-1">
+              Sin reservas {FILTER_LABELS[filter].toLowerCase()}
+            </p>
+            <p className="text-sm text-muted max-w-sm mx-auto mb-5">
+              {filter === "proximas"
+                ? "Cuando reserves una cancha, aparecerá aquí."
+                : "Aquí verás las reservas en este estado."}
+            </p>
+            {filter === "proximas" && (
+              <a href="/reservas" className="btn-primary inline-flex">
+                Reservar ahora
+              </a>
+            )}
+          </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {reservas.map((r) => (
