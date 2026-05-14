@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
 import { sendRecordatorio } from "@/lib/email/sendRecordatorio";
+import { formatLimaDate, formatLimaHourRange } from "@/lib/time";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -66,8 +67,8 @@ export async function GET(req: NextRequest) {
         cliente: u.nombre,
         campus: c.campus.nombre,
         cancha: c.nombre,
-        fecha: start.toLocaleDateString("es-PE"),
-        hora: `${start.getHours().toString().padStart(2,"0")}:00 - ${end.getHours().toString().padStart(2,"0")}:00`,
+        fecha: formatLimaDate(start),
+        hora: formatLimaHourRange(start, end),
       });
       await supabase.from("notificaciones").insert({
         usuarios_id: u.id,

@@ -224,15 +224,6 @@ export default function Reservas() {
         onAuthSuccess={() => setShowAuthModal(false)}
       />
       <div className="flex-1 max-w-7xl mx-auto w-full px-4 md:px-6 py-6 md:py-10">
-        {/* Page header */}
-        <header className="mb-8">
-          <p className="text-eyebrow text-brand mb-2">Reserva tu cancha</p>
-          <h1 className="text-display-lg">Disponibilidad en tiempo real</h1>
-          <p className="text-muted text-sm md:text-base mt-2 max-w-2xl">
-            Elige tu sede, deporte y horario. Confirma en segundos.
-          </p>
-        </header>
-
         {isLoading ? (
           <div className="card-soft p-8 text-center text-muted animate-pulse-soft">
             Cargando sedes y canchas…
@@ -247,15 +238,17 @@ export default function Reservas() {
           </div>
         ) : (
           <>
-            <button
-              type="button"
-              onClick={() => setIsCampusMenuOpen(true)}
-              className="md:hidden mb-4 btn-secondary !py-2 !px-3"
-              aria-label="Abrir menú de sedes"
-            >
-              <span className="text-lg">≡</span>
-              Seleccionar sede
-            </button>
+            <div className="md:hidden mb-4">
+              <button
+                type="button"
+                onClick={() => setIsCampusMenuOpen(true)}
+                className="btn-secondary !py-2 !px-3"
+                aria-label="Abrir menú de sedes"
+              >
+                <span className="text-lg">≡</span>
+                Seleccionar sede
+              </button>
+            </div>
             <CampusMobileMenu
               campuses={campuses}
               selectedCampusId={selectedCampusId}

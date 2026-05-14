@@ -5,6 +5,7 @@ import { createServiceClient } from "@/lib/supabase/server";
 import { pagoTarjetaSchema, pagoYapeSchema, type PagoTarjetaInput } from "@/lib/validators/pago";
 import { generarVoucherPng } from "@/lib/voucher/render";
 import { sendConfirmacion } from "@/lib/email/sendConfirmacion";
+import { formatLimaDate, formatLimaTime12, formatLimaHourRange, diffHours } from "@/lib/time";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
@@ -14,17 +15,6 @@ function deduceBrand(numero: string): string {
   if (/^5[1-5]/.test(numero) || /^2(2[2-9]|[3-6]|7[01]|720)/.test(numero)) return "MASTERCARD";
   if (/^3[47]/.test(numero)) return "AMEX";
   return "DESCONOCIDA";
-}
-
-function formatFecha(d: Date): string {
-  return d.toLocaleDateString("es-PE", { day: "2-digit", month: "2-digit", year: "numeric" });
-}
-function formatHora12(d: Date): string {
-  return d.toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit", hour12: true });
-}
-function formatHoraRange(start: Date, end: Date): string {
-  const f = (d: Date) => `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
-  return `${f(start)} - ${f(end)}`;
 }
 
 type ReservaConJoin = {
@@ -161,7 +151,7 @@ export async function POST(req: NextRequest) {
   // Generar voucher PNG
   const start = new Date(reserva.fecha_empieza);
   const end = new Date(reserva.fecha_termina);
-  const horas = Math.round((end.getTime() - start.getTime()) / 3600000);
+  const horas = diffHours(start, end);
   const cancha = reserva.canchas_deportivas;
   const campus = cancha.campus;
 
@@ -173,8 +163,8 @@ export async function POST(req: NextRequest) {
     correlativo,
     cliente_nombre: nombreParaVoucher,
     cliente_dni: dniParaVoucher,
-    fecha: formatFecha(start),
-    hora: formatHora12(new Date()),
+    fecha: formatLimaDate(start),
+    hora: formatLimaTime12(new Date()),
     descripcion: `${horas}h ${cancha.nombre} - SEDE ${campus.nombre.replace(/^Sede\s+/i, "").toUpperCase()}`,
     horas,
     total: reserva.precio_total,
@@ -205,8 +195,8 @@ export async function POST(req: NextRequest) {
       cliente: user.nombre,
       campus: campus.nombre,
       cancha: cancha.nombre,
-      fecha: formatFecha(start),
-      hora: formatHoraRange(start, end),
+      fecha: formatLimaDate(start),
+      hora: formatLimaHourRange(start, end),
       total: reserva.precio_total,
       voucherFilename: voucherPath,
       voucherPng: png,

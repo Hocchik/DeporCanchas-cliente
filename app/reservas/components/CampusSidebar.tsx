@@ -16,11 +16,9 @@ export default function CampusSidebar({ campuses, selectedCampusId, onSelect }: 
   return (
     <aside className="order-1 hidden md:order-1 md:block md:sticky md:top-20 self-start">
       <div className="card-soft p-5">
-        <p className="text-eyebrow text-brand mb-2">Sedes</p>
-        <h2 className="font-display font-semibold text-lg text-primary mb-1">
-          Nuestros campus
+        <h2 className="font-display font-semibold text-lg text-primary mb-4">
+          Sedes
         </h2>
-        <p className="text-sm text-muted mb-4">Elige tu campus preferido</p>
 
         <div className="space-y-1.5">
           {campuses.map((campus) => {
