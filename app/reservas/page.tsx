@@ -224,6 +224,15 @@ export default function Reservas() {
         onAuthSuccess={() => setShowAuthModal(false)}
       />
       <div className="flex-1 max-w-7xl mx-auto w-full px-4 md:px-6 py-6 md:py-10">
+        {/* Page header */}
+        <header className="mb-8">
+          <p className="text-eyebrow text-brand mb-2">Reserva tu cancha</p>
+          <h1 className="text-display-lg">Disponibilidad en tiempo real</h1>
+          <p className="text-muted text-sm md:text-base mt-2 max-w-2xl">
+            Elige tu sede, deporte y horario. Confirma en segundos.
+          </p>
+        </header>
+
         {isLoading ? (
           <div className="card-soft p-8 text-center text-muted animate-pulse-soft">
             Cargando sedes y canchas…
@@ -267,7 +276,7 @@ export default function Reservas() {
                   <div className="flex flex-wrap items-center justify-between gap-4">
                     <div>
                       <p className="text-eyebrow text-brand mb-1">Sede activa</p>
-                      <h1 className="text-display-md font-display text-primary">{selectedCampus?.name ?? "Sede"}</h1>
+                      <h2 className="text-display-md font-display text-primary">{selectedCampus?.name ?? "Sede"}</h2>
                     </div>
                     <ViewModeToggle viewMode={viewMode} setViewMode={setViewMode} />
                   </div>
