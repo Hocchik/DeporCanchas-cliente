@@ -4,6 +4,16 @@ import { createServiceClient } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
 
+type ReembolsoRow = {
+  id: number;
+  reserva_id: number;
+  monto: number;
+  porcentaje: number;
+  estado: "pendiente" | "procesado" | "fallido";
+  creado_en: string;
+  procesado_en: string | null;
+};
+
 export async function GET(req: NextRequest) {
   let user;
   try {
@@ -34,9 +44,31 @@ export async function GET(req: NextRequest) {
     q = q.in("estado", ["cancelada", "expirada"]);
   }
 
-  const { data, error } = await q;
+  const { data: reservas, error } = await q;
   if (error) {
     return Response.json({ error: "query_failed", detail: error.message }, { status: 500 });
   }
-  return Response.json({ reservas: data ?? [] });
+
+  // Reembolsos en una segunda query (defensiva — si la tabla aún no existe, devolvemos vacío)
+  const reservaIds = (reservas ?? []).map((r) => r.id);
+  let reembolsosByReserva: Record<number, ReembolsoRow[]> = {};
+  if (reservaIds.length > 0) {
+    const { data: reembolsos } = await supabase
+      .from("reembolsos")
+      .select("id, reserva_id, monto, porcentaje, estado, creado_en, procesado_en")
+      .in("reserva_id", reservaIds);
+    if (reembolsos) {
+      reembolsosByReserva = (reembolsos as ReembolsoRow[]).reduce<Record<number, ReembolsoRow[]>>((acc, r) => {
+        (acc[r.reserva_id] ||= []).push(r);
+        return acc;
+      }, {});
+    }
+  }
+
+  const out = (reservas ?? []).map((r) => ({
+    ...r,
+    reembolsos: reembolsosByReserva[r.id] ?? [],
+  }));
+
+  return Response.json({ reservas: out });
 }
