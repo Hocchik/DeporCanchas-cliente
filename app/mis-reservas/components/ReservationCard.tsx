@@ -14,6 +14,14 @@ export type Reserva = {
     campus: { id: number; nombre: string; ubicacion: string };
   };
   pagos: { voucher_url: string | null; metodo_pago?: string }[] | null;
+  reembolsos: {
+    id: number;
+    monto: number;
+    porcentaje: number;
+    estado: "pendiente" | "procesado" | "fallido";
+    creado_en: string;
+    procesado_en: string | null;
+  }[] | null;
 };
 
 const ESTADOS: Record<string, { label: string; cls: string }> = {
@@ -39,6 +47,18 @@ export default function ReservationCard({ reserva, onClick }: { reserva: Reserva
   const campus = cancha.campus;
   const estado = ESTADOS[reserva.estado] ?? { label: reserva.estado, cls: "bg-surface-alt text-muted" };
   const voucherUrl = reserva.pagos?.[0]?.voucher_url ?? null;
+  const reembolso = reserva.reembolsos?.[0] ?? null;
+  const reembolsoLabel = !reembolso
+    ? reserva.estado === "cancelada" ? "Sin reembolso (cancelación tardía)" : null
+    : reembolso.estado === "procesado"
+      ? `Reembolso S/${reembolso.monto.toFixed(2)} · procesado ${reembolso.procesado_en ? new Date(reembolso.procesado_en).toLocaleDateString("es-PE") : ""}`
+      : reembolso.estado === "pendiente"
+        ? `Reembolso S/${reembolso.monto.toFixed(2)} · en proceso`
+        : `Reembolso S/${reembolso.monto.toFixed(2)} · falló`;
+  const reembolsoTone = reembolso?.estado === "procesado" ? "text-brand"
+    : reembolso?.estado === "pendiente" ? "text-amber-600 dark:text-amber-400"
+    : reembolso?.estado === "fallido" ? "text-danger"
+    : "text-soft";
 
   return (
     <div className="card-soft p-4 w-full group">
@@ -64,6 +84,9 @@ export default function ReservationCard({ reserva, onClick }: { reserva: Reserva
           <p className="text-xs text-muted truncate mt-0.5">{campus.nombre}</p>
           <p className="text-sm text-primary mt-2 capitalize">{fechaLabel}</p>
           <p className="text-sm text-muted">{horaLabel}</p>
+          {reembolsoLabel && (
+            <p className={`text-xs mt-1.5 font-medium ${reembolsoTone}`}>{reembolsoLabel}</p>
+          )}
         </div>
         <div className="flex flex-col items-end justify-between shrink-0">
           <span className="text-lg font-display font-bold text-brand">S/{reserva.precio_total.toFixed(2)}</span>
