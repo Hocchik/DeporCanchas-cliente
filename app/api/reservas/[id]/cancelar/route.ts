@@ -122,6 +122,7 @@ export async function POST(_req: NextRequest, ctx: { params: Promise<{ id: strin
     const reembolso = reembolso_creado && pago
       ? {
           monto: monto_reembolso,
+          montoPagado: monto_pagado,
           porcentaje: policy.porcentaje as 50 | 100,
           destino:
             pago.metodo_pago === "tarjeta"

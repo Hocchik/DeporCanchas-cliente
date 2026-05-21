@@ -10,6 +10,7 @@ type Input = {
   hora: string;
   reembolso: null | {
     monto: number;
+    montoPagado: number;
     porcentaje: 50 | 100;
     destino: string;
   };
@@ -17,16 +18,25 @@ type Input = {
 
 export async function sendCancelacion(input: Input) {
   const resend = getResend();
+  const contexto =
+    input.reembolso?.porcentaje === 100
+      ? "Cancelaste con <strong>4 días o más</strong> de anticipación, por lo que te corresponde el <strong>reembolso completo (100%)</strong>."
+      : input.reembolso?.porcentaje === 50
+        ? "Cancelaste entre <strong>1 y 4 días</strong> antes de la hora de juego, por lo que te corresponde un <strong>reembolso parcial (50%)</strong>."
+        : "";
+
   const reembolsoBlock = input.reembolso
     ? `
       <div style="margin:20px 0 0;padding:16px 18px;background:#E2F5E8;border-radius:12px;">
         <p style="margin:0;font-weight:700;font-size:15px;">
           Reembolso del ${input.reembolso.porcentaje}%: S/ ${input.reembolso.monto.toFixed(2)}
         </p>
+        <p style="margin:8px 0 0;font-size:14px;">${contexto}</p>
         <p style="margin:8px 0 0;font-size:14px;">
-          <strong>Destino:</strong> ${input.reembolso.destino}
+          <strong>Monto pagado:</strong> S/ ${input.reembolso.montoPagado.toFixed(2)}<br/>
+          <strong>Destino del reembolso:</strong> ${input.reembolso.destino}
         </p>
-        <p style="margin:8px 0 0;font-size:14px;">
+        <p style="margin:12px 0 0;font-size:14px;">
           La devolución se realizará dentro de un periodo de
           <strong>5 a 7 días hábiles</strong>. Recibirás un correo de confirmación
           cuando el reembolso se haya acreditado.
