@@ -67,6 +67,8 @@ export async function GET(req: NextRequest) {
 
   const out = (reservas ?? []).map((r) => ({
     ...r,
+    // PostgREST devuelve pagos como objeto (FK unique) o array; normalizamos a array
+    pagos: r.pagos ? (Array.isArray(r.pagos) ? r.pagos : [r.pagos]) : [],
     reembolsos: reembolsosByReserva[r.id] ?? [],
   }));
 

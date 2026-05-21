@@ -18,8 +18,14 @@ type ReservaRow = {
   usuarios_id: number;
   estado: string;
   fecha_empieza: string;
-  pagos: PagoRow[];
+  // PostgREST devuelve objeto (no array) porque pagos.reserva_id es UNIQUE
+  pagos: PagoRow | PagoRow[] | null;
 };
+
+function firstPago(pagos: PagoRow | PagoRow[] | null): PagoRow | null {
+  if (!pagos) return null;
+  return Array.isArray(pagos) ? pagos[0] ?? null : pagos;
+}
 
 export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   let user;
@@ -50,7 +56,7 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
   const puede_cancelar = reserva.estado === "pagada" && new Date(reserva.fecha_empieza) > new Date();
 
   const policy = calcularPoliticaReembolso(reserva.fecha_empieza);
-  const pago = reserva.pagos?.[0];
+  const pago = firstPago(reserva.pagos);
   const monto_pagado = pago?.monto ?? 0;
   const monto_reembolso = calcularMontoReembolso(monto_pagado, policy.porcentaje);
 
