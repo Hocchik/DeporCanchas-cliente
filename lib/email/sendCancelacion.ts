@@ -19,19 +19,23 @@ export async function sendCancelacion(input: Input) {
   const resend = getResend();
   const reembolsoBlock = input.reembolso
     ? `
-      <p style="margin:16px 0 0;">
-        <strong>Reembolso aplicable:</strong> S/ ${input.reembolso.monto.toFixed(2)}
-        (${input.reembolso.porcentaje}% del total pagado).<br/>
-        <strong>Destino:</strong> ${input.reembolso.destino}.
-      </p>
-      <p style="margin:8px 0 0;">
-        Nuestro equipo procesará el reembolso en breve.
-        Recibirás otro correo cuando se acredite.
-      </p>
+      <div style="margin:20px 0 0;padding:16px 18px;background:#E2F5E8;border-radius:12px;">
+        <p style="margin:0;font-weight:700;font-size:15px;">
+          Reembolso del ${input.reembolso.porcentaje}%: S/ ${input.reembolso.monto.toFixed(2)}
+        </p>
+        <p style="margin:8px 0 0;font-size:14px;">
+          <strong>Destino:</strong> ${input.reembolso.destino}
+        </p>
+        <p style="margin:8px 0 0;font-size:14px;">
+          La devolución se realizará dentro de un periodo de
+          <strong>5 a 7 días hábiles</strong>. Recibirás un correo de confirmación
+          cuando el reembolso se haya acreditado.
+        </p>
+      </div>
     `
     : `
-      <p style="margin:16px 0 0;">
-        Esta cancelación no genera reembolso según nuestra política
+      <p style="margin:16px 0 0;color:#9B2C2C;">
+        Esta cancelación <strong>no genera reembolso</strong> según nuestra política
         (cancelaste a menos de 24 horas de la hora de juego).
       </p>
     `;

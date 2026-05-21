@@ -242,7 +242,7 @@ function ConfirmCancelView({
               />
               <Line label="Se acreditará a" value={destinoLabel ?? "—"} />
               <p className="text-xs text-muted pt-2 border-t border-soft">
-                Nuestro equipo procesará el reembolso. Recibirás un correo cuando se acredite.
+                La devolución se realizará dentro de 5 a 7 días hábiles. Recibirás un correo cuando se acredite.
               </p>
             </>
           ) : (
