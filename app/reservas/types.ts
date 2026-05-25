@@ -13,6 +13,10 @@ export type Court = {
   type: CourtType;
   pricePerHour: number;
   image: string;
+  /** false si la cancha está en mantenimiento/inactiva o su sede inactiva */
+  disponible?: boolean;
+  /** etiqueta a mostrar cuando no está disponible (ej. "En mantenimiento") */
+  noDisponibleLabel?: string;
   sportKey?: "futbol7" | "futbol11" | "tenis" | "padel";
   tariffs?: {
     precio: number;

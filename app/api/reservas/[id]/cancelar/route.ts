@@ -86,8 +86,10 @@ export async function POST(_req: NextRequest, ctx: { params: Promise<{ id: strin
 
   // Si aplica reembolso, registrar en tabla `reembolsos` (estado pendiente).
   // El admin (no en este alcance) lo marcará como procesado más tarde.
+  const aplicaReembolso = policy.porcentaje > 0 && !!pago && monto_reembolso > 0;
   let reembolso_creado = false;
-  if (policy.porcentaje > 0 && pago && monto_reembolso > 0) {
+  let reembolso_error: string | null = null;
+  if (aplicaReembolso && pago) {
     const destino_detalle =
       pago.metodo_pago === "tarjeta"
         ? `${pago.card_brand ?? "Tarjeta"} ****${pago.card_last4 ?? "----"}`
@@ -106,8 +108,16 @@ export async function POST(_req: NextRequest, ctx: { params: Promise<{ id: strin
     });
     if (insErr) {
       // No revertimos la cancelación: la reserva ya está cancelada (slot liberado).
-      // Logueamos para revisar manualmente.
-      console.error("reembolso_insert_failed", insErr);
+      // Pero NO lo silenciamos: dejamos rastro completo y lo devolvemos al cliente
+      // para que la UI pueda avisar "tu reembolso quedó pendiente de registro".
+      console.error("reembolso_insert_failed", {
+        reserva_id: reserva.id,
+        pago_id: pago.id,
+        monto: monto_reembolso,
+        porcentaje: policy.porcentaje,
+        detail: insErr.message,
+      });
+      reembolso_error = insErr.message;
     } else {
       reembolso_creado = true;
     }
@@ -119,7 +129,9 @@ export async function POST(_req: NextRequest, ctx: { params: Promise<{ id: strin
     const end = new Date(reserva.fecha_termina);
     const cancha = reserva.canchas_deportivas;
     const campus = cancha.campus;
-    const reembolso = reembolso_creado && pago
+    // El correo informa el reembolso siempre que APLIQUE, aunque el registro en BD
+    // haya fallado: el cliente no debe quedarse sin constancia de su reembolso.
+    const reembolso = aplicaReembolso && pago
       ? {
           monto: monto_reembolso,
           montoPagado: monto_pagado,
@@ -148,6 +160,9 @@ export async function POST(_req: NextRequest, ctx: { params: Promise<{ id: strin
     ok: true,
     porcentaje: policy.porcentaje,
     monto_reembolso,
+    reembolso_aplica: aplicaReembolso,
     reembolso_creado,
+    // Presente solo si el reembolso aplicaba pero NO se pudo registrar la fila.
+    reembolso_error,
   });
 }

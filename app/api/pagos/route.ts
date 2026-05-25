@@ -115,14 +115,21 @@ export async function POST(req: NextRequest) {
     comprobante_yape_url = urlData?.signedUrl ?? null;
   }
 
-  // Obtener correlativo (max + 1; aceptable para tráfico bajo)
-  const { data: rows } = await supabase
-    .from("pagos")
-    .select("voucher_correlativo")
-    .order("voucher_correlativo", { ascending: false })
-    .limit(1);
-  const correlativo: number =
-    ((rows?.[0]?.voucher_correlativo as number | null) ?? 0) + 1;
+  // Correlativo atómico vía secuencia Postgres (evita que 2 pagos concurrentes
+  // tomen el mismo número y se pisen el voucher). Fallback a max+1 si la función
+  // RPC aún no existe en la BD.
+  let correlativo: number;
+  const { data: seqVal, error: seqErr } = await supabase.rpc("next_voucher_correlativo");
+  if (!seqErr && typeof seqVal === "number") {
+    correlativo = seqVal;
+  } else {
+    const { data: rows } = await supabase
+      .from("pagos")
+      .select("voucher_correlativo")
+      .order("voucher_correlativo", { ascending: false })
+      .limit(1);
+    correlativo = ((rows?.[0]?.voucher_correlativo as number | null) ?? 0) + 1;
+  }
 
   // Insertar pago
   const insertData: Record<string, unknown> = {

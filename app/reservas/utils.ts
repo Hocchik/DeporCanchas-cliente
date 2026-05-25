@@ -1,4 +1,5 @@
 import type { Court, CourtTimeSlot, TimeStatus } from "./types";
+import { limaYMD, dowYMD } from "@/lib/lima-time";
 
 export const SLOT_TIMES = [
   "08:00",
@@ -25,13 +26,6 @@ export const LEGEND_COLORS: Record<TimeStatus, string> = {
 
 export const WEEKDAY_LABELS = ["Dom", "Lun", "Mar", "Mie", "Jue", "Vie", "Sab"];
 
-const toDateKey = (date: Date) => {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-};
-
 export const formatTimeLabel = (time24: string) => {
   const [hours, minutes] = time24.split(":").map(Number);
   const period = hours >= 12 ? "PM" : "AM";
@@ -54,8 +48,8 @@ export const formatTimeRange24 = (time24: string) => {
 };
 
 export const getStatusForCourt = (court: Court, date: Date): CourtTimeSlot[] => {
-  const dateKey = toDateKey(date);
-  const dayKey = String(date.getDay());
+  const dateKey = limaYMD(date);
+  const dayKey = String(dowYMD(dateKey));
   const blockedByDate = court.availability?.blockedByDate?.[dateKey] ?? [];
   const occupiedByDate = court.availability?.occupiedByDate?.[dateKey] ?? [];
   const blocked = new Set(

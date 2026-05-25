@@ -1,6 +1,6 @@
 "use client";
 import React from "react";
-import { ArrowRightIcon, UserIcon, EnvelopeIcon, LockClosedIcon, EyeIcon, EyeSlashIcon, PhoneIcon } from '@heroicons/react/24/solid';
+import { ArrowRightIcon, UserIcon, EnvelopeIcon, LockClosedIcon, EyeIcon, EyeSlashIcon, PhoneIcon, IdentificationIcon } from '@heroicons/react/24/solid';
 import { useRegister } from "./useRegister";
 
 export default function RegisterForm({
@@ -12,6 +12,7 @@ export default function RegisterForm({
 } = {}) {
   const {
     nombre, setNombre,
+    dni, setDni,
     celular, setCelular,
     email, setEmail,
     clave, setClave,
@@ -52,6 +53,26 @@ export default function RegisterForm({
             onChange={(e) => {
               setEmail(e.target.value);
               if (fieldErrors.email) setFieldErrors(prev => ({ ...prev, email: undefined }));
+            }}
+            className="flex-1 bg-transparent border-none outline-none text-primary placeholder:text-soft text-base"
+          />
+        </FieldShell>
+      </Field>
+
+      <Field label="DNI" error={fieldErrors.dni}>
+        <FieldShell hasError={!!fieldErrors.dni}>
+          <IdentificationIcon className="w-5 h-5 text-brand opacity-70 shrink-0" />
+          <input
+            type="text"
+            inputMode="numeric"
+            maxLength={8}
+            name="registro_dni"
+            autoComplete="off"
+            placeholder="12345678"
+            value={dni}
+            onChange={(e) => {
+              setDni(e.target.value.replace(/\D/g, "").slice(0, 8));
+              if (fieldErrors.dni) setFieldErrors(prev => ({ ...prev, dni: undefined }));
             }}
             className="flex-1 bg-transparent border-none outline-none text-primary placeholder:text-soft text-base"
           />

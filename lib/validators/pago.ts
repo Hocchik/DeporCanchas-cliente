@@ -1,5 +1,22 @@
 import { z } from "zod";
 
+/** Algoritmo de Luhn: valida el dígito de control de una tarjeta (16 dígitos). */
+function luhnValido(numero: string): boolean {
+  let suma = 0;
+  let alternar = false;
+  for (let i = numero.length - 1; i >= 0; i--) {
+    let d = numero.charCodeAt(i) - 48;
+    if (d < 0 || d > 9) return false;
+    if (alternar) {
+      d *= 2;
+      if (d > 9) d -= 9;
+    }
+    suma += d;
+    alternar = !alternar;
+  }
+  return suma % 10 === 0;
+}
+
 export const pagoTarjetaSchema = z.object({
   reserva_code: z.string().min(1),
   metodo_pago: z.literal("tarjeta"),
@@ -14,7 +31,10 @@ export const pagoTarjetaSchema = z.object({
     if (m < 0 || (m === 0 && ahora.getDate() < dob.getDate())) edad--;
     return edad >= 18;
   }, "Debe ser mayor de 18"),
-  numero: z.string().transform((s) => s.replace(/\s+/g, "")).pipe(z.string().regex(/^\d{16}$/)),
+  numero: z
+    .string()
+    .transform((s) => s.replace(/\s+/g, ""))
+    .pipe(z.string().regex(/^\d{16}$/).refine(luhnValido, "Número de tarjeta inválido")),
   expiracion: z.string().regex(/^(0[1-9]|1[0-2])\/\d{2}$/),
   cvv: z.string().regex(/^\d{3}$/),
 });
