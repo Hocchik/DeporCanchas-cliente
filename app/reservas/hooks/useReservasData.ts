@@ -7,7 +7,7 @@ import { SLOT_TIMES } from "../utils";
 import { limaYMD, limaMinutesOfDay, dowYMD } from "@/lib/lima-time";
 
 type CampusRow = { id: number; nombre: string; ubicacion: string; estado: string };
-type CourtRow = { id: number; campus_id: number; nombre: string; tipo_deporte: string; estado: string };
+type CourtRow = { id: number; campus_id: number; nombre: string; tipo_deporte: string; estado: string; imagen_url: string | null };
 type AvailabilityRow = { canchasdep_id: number; dias_de_la_semana: number; hora_abre: string; hora_cierra: string };
 type ReservaRow = { canchasdep_id: number; fecha_empieza: string; fecha_termina: string; estado: string | null };
 type TarifaRow = {
@@ -115,7 +115,7 @@ export function useReservasData(allDates: Date[]) {
 
         const [campusR, courtsR, availR, tarifasR, reservasR, baseR] = await Promise.all([
           supabase.from("campus").select("id, nombre, ubicacion, estado"),
-          supabase.from("canchas_deportivas").select("id, campus_id, nombre, tipo_deporte, estado"),
+          supabase.from("canchas_deportivas").select("id, campus_id, nombre, tipo_deporte, estado, imagen_url"),
           supabase.from("cancha_disponibilidad").select("canchasdep_id, dias_de_la_semana, hora_abre, hora_cierra"),
           supabase.from("tarifas_canchasdep").select("canchasdep_id, precio_reemplazo, tarifas (nombre, precio, prioridad, hora_empieza, hora_termina, fecha_empieza, fecha_termina)"),
           supabase.from("reservas_publicas")
@@ -178,7 +178,7 @@ export function useReservasData(allDates: Date[]) {
             return {
               id: String(co.id), name: co.nombre, type, sportKey,
               tariffs: tariffCandidates, pricePerHour: 0,
-              image: courtImageForType(type), availability,
+              image: co.imagen_url || courtImageForType(type), availability,
               disponible, noDisponibleLabel,
             } satisfies Court;
           });
