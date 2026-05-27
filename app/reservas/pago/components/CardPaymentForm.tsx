@@ -32,6 +32,23 @@ function formatExp(v: string) {
   if (d.length <= 2) return d;
   return `${d.slice(0, 2)}/${d.slice(2)}`;
 }
+/** Algoritmo de Luhn: valida el dígito de control de la tarjeta. */
+function luhnValido(numero: string): boolean {
+  let suma = 0;
+  let alternar = false;
+  for (let i = numero.length - 1; i >= 0; i--) {
+    let d = numero.charCodeAt(i) - 48;
+    if (d < 0 || d > 9) return false;
+    if (alternar) {
+      d *= 2;
+      if (d > 9) d -= 9;
+    }
+    suma += d;
+    alternar = !alternar;
+  }
+  return suma % 10 === 0;
+}
+
 function brandFromNumber(numero: string): string {
   const n = numero.replace(/\s/g, "");
   if (n.startsWith("4")) return "VISA";
@@ -65,6 +82,7 @@ export default function CardPaymentForm({ onSubmit, disabled }: Props) {
     }
     const numLimpio = v.numero.replace(/\s/g, "");
     if (!/^\d{16}$/.test(numLimpio)) e.numero = "Número debe tener 16 dígitos";
+    else if (!luhnValido(numLimpio)) e.numero = "Número de tarjeta inválido";
     if (!/^(0[1-9]|1[0-2])\/\d{2}$/.test(v.expiracion)) e.expiracion = "Formato MM/AA";
     if (!/^\d{3}$/.test(v.cvv)) e.cvv = "CVV de 3 dígitos";
     setErrors(e);

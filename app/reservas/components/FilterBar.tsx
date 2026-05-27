@@ -1,6 +1,7 @@
 import React from "react";
 import { SparklesIcon, TrophyIcon, BoltIcon, QueueListIcon, ChevronLeftIcon, ChevronRightIcon } from "@heroicons/react/24/solid";
 import type { CourtType } from "../types";
+import { limaYMD, dowYMD } from "@/lib/lima-time";
 
 interface FilterBarProps {
   selectedSport: "all" | CourtType;
@@ -75,6 +76,7 @@ export default function FilterBar({
               const absoluteIndex = windowStart + index;
               const isToday = absoluteIndex === 0;
               const active = selectedDateIndex === absoluteIndex;
+              const ymd = limaYMD(date);
               return (
                 <button
                   key={date.toISOString()}
@@ -88,9 +90,9 @@ export default function FilterBar({
                   ].join(" ")}
                 >
                   <span className="block text-xs">
-                    {isToday ? "Hoy" : WEEKDAY_LABELS[date.getDay()]}
+                    {isToday ? "Hoy" : WEEKDAY_LABELS[dowYMD(ymd)]}
                   </span>
-                  <span className="text-lg font-bold leading-tight">{date.getDate()}</span>
+                  <span className="text-lg font-bold leading-tight">{Number(ymd.slice(8, 10))}</span>
                 </button>
               );
             })}

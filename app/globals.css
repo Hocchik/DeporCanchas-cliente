@@ -323,6 +323,32 @@ body {
 }
 .text-danger { color: #DC2626; }
 :root[data-theme="dark"] .text-danger { color: #FCA5A5; }
+
+/* Slot bloqueado manualmente por el admin (estado 'bloqueada') */
+.slot-blocked {
+  background: repeating-linear-gradient(
+    45deg,
+    rgba(71, 85, 105, 0.14),
+    rgba(71, 85, 105, 0.14) 6px,
+    rgba(71, 85, 105, 0.05) 6px,
+    rgba(71, 85, 105, 0.05) 12px
+  );
+  color: #475569;
+  border-color: rgba(71, 85, 105, 0.35);
+}
+:root[data-theme="dark"] .slot-blocked {
+  background: repeating-linear-gradient(
+    45deg,
+    rgba(148, 163, 184, 0.18),
+    rgba(148, 163, 184, 0.18) 6px,
+    rgba(148, 163, 184, 0.06) 6px,
+    rgba(148, 163, 184, 0.06) 12px
+  );
+  color: #cbd5e1;
+  border-color: rgba(148, 163, 184, 0.30);
+}
+.bg-blocked-soft { background: rgba(71, 85, 105, 0.18); }
+.border-blocked-soft { border-color: rgba(71, 85, 105, 0.35); }
 .bg-danger-soft { background: rgba(239, 68, 68, 0.10); }
 .border-danger-soft { border-color: rgba(239, 68, 68, 0.30); }
 

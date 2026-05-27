@@ -4,9 +4,10 @@ import { useEffect, useMemo, useState } from "react";
 import { createPublicClient } from "@/lib/supabase/public";
 import type { Court, CourtType, ReservasData } from "../types";
 import { SLOT_TIMES } from "../utils";
+import { limaYMD, limaMinutesOfDay, dowYMD } from "@/lib/lima-time";
 
 type CampusRow = { id: number; nombre: string; ubicacion: string; estado: string };
-type CourtRow = { id: number; campus_id: number; nombre: string; tipo_deporte: string; estado: string };
+type CourtRow = { id: number; campus_id: number; nombre: string; tipo_deporte: string; estado: string; imagen_url: string | null };
 type AvailabilityRow = { canchasdep_id: number; dias_de_la_semana: number; hora_abre: string; hora_cierra: string };
 type ReservaRow = { canchasdep_id: number; fecha_empieza: string; fecha_termina: string; estado: string | null };
 type TarifaRow = {
@@ -20,12 +21,6 @@ type TarifaRow = {
 };
 export type BaseTariffs = { futbol7: number; futbol11: number; tenis: number; padel: number };
 
-const toDateKey = (date: Date) => {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, "0");
-  const d = String(date.getDate()).padStart(2, "0");
-  return `${y}-${m}-${d}`;
-};
 const toMinutes = (t: string) => { const [h, m] = t.split(":").map(Number); return h * 60 + m; };
 const isReservationActive = (estado: string | null) => {
   if (!estado) return true;
@@ -56,35 +51,45 @@ function buildAvailabilityForCourt(
       return acc;
     }, {});
 
-  const reservationsByDate = reservas
+  // Separamos reservas reales (ocupado) de bloqueos manuales del admin (estado 'bloqueada' → bloqueado)
+  const isBlock = (estado: string | null) => (estado ?? "").trim().toLowerCase() === "bloqueada";
+
+  const occupiedByDateRaw: Record<string, Set<string>> = {};
+  const blockedByReservaRaw: Record<string, Set<string>> = {};
+
+  reservas
     .filter((row) => row.canchasdep_id === courtId)
     .filter((row) => isReservationActive(row.estado))
-    .reduce<Record<string, Set<string>>>((acc, row) => {
-      const start = new Date(row.fecha_empieza);
-      const end = new Date(row.fecha_termina);
-      const dateKey = toDateKey(start);
-      const startMin = start.getHours() * 60 + start.getMinutes();
-      const endMin = end.getHours() * 60 + end.getMinutes();
-      const set = acc[dateKey] ?? new Set<string>();
+    .forEach((row) => {
+      // Hora de pared Lima: independiente de la zona del navegador
+      const dateKey = limaYMD(row.fecha_empieza);
+      const startMin = limaMinutesOfDay(row.fecha_empieza);
+      const endMin = limaMinutesOfDay(row.fecha_termina);
+      const target = isBlock(row.estado) ? blockedByReservaRaw : occupiedByDateRaw;
+      const set = target[dateKey] ?? new Set<string>();
       SLOT_TIMES.forEach((time) => {
         const m = toMinutes(time);
         if (m >= startMin && m < endMin) set.add(time);
       });
-      acc[dateKey] = set;
-      return acc;
-    }, {});
+      target[dateKey] = set;
+    });
 
   dates.forEach((date) => {
-    const dateKey = toDateKey(date);
-    const dayKey = String(date.getDay());
+    const dateKey = limaYMD(date);
+    const dayKey = String(dowYMD(dateKey));
     const ranges = availabilityByDay[dayKey] ?? [];
-    blockedByDate[dateKey] = SLOT_TIMES.filter((t) => {
+    // Fuera del horario de atención
+    const outOfHours = SLOT_TIMES.filter((t) => {
       if (!ranges.length) return true;
       const m = toMinutes(t);
       return !ranges.some((r) => m >= r.start && m < r.end);
     });
-    const set = reservationsByDate[dateKey];
-    occupiedByDate[dateKey] = set ? Array.from(set.values()) : [];
+    // Bloqueos manuales del admin se suman a "bloqueado"
+    const manualBlocks = blockedByReservaRaw[dateKey] ? Array.from(blockedByReservaRaw[dateKey].values()) : [];
+    blockedByDate[dateKey] = Array.from(new Set([...outOfHours, ...manualBlocks]));
+
+    const occ = occupiedByDateRaw[dateKey];
+    occupiedByDate[dateKey] = occ ? Array.from(occ.values()) : [];
   });
 
   return { blockedByDate, occupiedByDate };
@@ -110,7 +115,7 @@ export function useReservasData(allDates: Date[]) {
 
         const [campusR, courtsR, availR, tarifasR, reservasR, baseR] = await Promise.all([
           supabase.from("campus").select("id, nombre, ubicacion, estado"),
-          supabase.from("canchas_deportivas").select("id, campus_id, nombre, tipo_deporte, estado"),
+          supabase.from("canchas_deportivas").select("id, campus_id, nombre, tipo_deporte, estado, imagen_url"),
           supabase.from("cancha_disponibilidad").select("canchasdep_id, dias_de_la_semana, hora_abre, hora_cierra"),
           supabase.from("tarifas_canchasdep").select("canchasdep_id, precio_reemplazo, tarifas (nombre, precio, prioridad, hora_empieza, hora_termina, fecha_empieza, fecha_termina)"),
           supabase.from("reservas_publicas")
@@ -140,6 +145,7 @@ export function useReservasData(allDates: Date[]) {
         }, { futbol7: 0, futbol11: 0, tenis: 0, padel: 0 });
 
         const mapped = campusRows.map((c) => {
+          const campusInactivo = normalizeText(c.estado ?? "") === "inactivo";
           const courts = courtRows.filter((co) => co.campus_id === c.id).map((co) => {
             const nt = normalizeText(co.tipo_deporte);
             let sportKey: Court["sportKey"] = "futbol7";
@@ -158,10 +164,22 @@ export function useReservasData(allDates: Date[]) {
                 return items.map((it) => ({ ...it, precio: row.precio_reemplazo ?? it.precio }));
               });
 
+            // Disponibilidad por estado de cancha/sede
+            const estadoCancha = normalizeText(co.estado ?? "");
+            const enMantenimiento = estadoCancha === "mantenimiento";
+            const inactiva = estadoCancha === "inactivo" || campusInactivo;
+            const disponible = !enMantenimiento && !inactiva;
+            const noDisponibleLabel = enMantenimiento
+              ? "En mantenimiento"
+              : inactiva
+                ? "No disponible"
+                : undefined;
+
             return {
               id: String(co.id), name: co.nombre, type, sportKey,
               tariffs: tariffCandidates, pricePerHour: 0,
-              image: courtImageForType(type), availability,
+              image: co.imagen_url || courtImageForType(type), availability,
+              disponible, noDisponibleLabel,
             } satisfies Court;
           });
           return { id: String(c.id), name: c.nombre, address: c.ubicacion, courts };

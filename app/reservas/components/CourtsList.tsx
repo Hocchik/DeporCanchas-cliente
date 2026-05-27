@@ -32,7 +32,7 @@ export default function CourtsList({
         <LegendDot className="bg-surface border border-default" label="Libre" />
         <LegendDot className="bg-brand" label="Seleccionado" />
         <LegendDot className="bg-danger-soft border border-danger-soft" label="Ocupado" />
-        <LegendDot className="bg-surface-alt opacity-60" label="Bloqueado" />
+        <LegendDot className="bg-blocked-soft border border-blocked-soft" label="Bloqueado" />
       </div>
 
       <div className="space-y-6">
@@ -41,20 +41,26 @@ export default function CourtsList({
           const timeStatus = selectedDate ? getStatusForCourt(court, selectedDate) : [];
           const slotsToRender = isSelected && selectedCourtSlots.length ? selectedCourtSlots : timeStatus;
 
+          const noDisponible = court.disponible === false;
+
           return (
             <div key={court.id} className="grid grid-cols-1 md:grid-cols-[1fr_1fr] gap-4">
               {/* Card de la cancha */}
               <button
                 type="button"
-                onClick={() => onSelectCourt(court.id)}
+                onClick={() => { if (!noDisponible) onSelectCourt(court.id); }}
+                disabled={noDisponible}
+                aria-disabled={noDisponible}
                 className={[
                   "relative w-full text-left rounded-2xl border-2 overflow-hidden bg-surface-elev transition",
-                  isSelected
-                    ? "border-brand shadow-card"
-                    : "border-soft shadow-soft hover:border-default hover:shadow-card hover:-translate-y-0.5",
+                  noDisponible
+                    ? "border-soft opacity-70 cursor-not-allowed"
+                    : isSelected
+                      ? "border-brand shadow-card"
+                      : "border-soft shadow-soft hover:border-default hover:shadow-card hover:-translate-y-0.5",
                 ].join(" ")}
               >
-                {isSelected && (
+                {isSelected && !noDisponible && (
                   <span className="absolute right-3 top-3 z-10 inline-flex items-center justify-center w-8 h-8 rounded-full bg-brand text-on-brand shadow-soft">
                     <CheckCircleIcon className="w-5 h-5" />
                   </span>
@@ -64,9 +70,17 @@ export default function CourtsList({
                   <img
                     src={court.image}
                     alt={court.name}
-                    className="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
+                    className={[
+                      "w-full h-full object-cover transition-transform duration-500",
+                      noDisponible ? "grayscale" : "hover:scale-105",
+                    ].join(" ")}
                   />
                   <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/30 to-transparent" />
+                  {noDisponible && (
+                    <span className="absolute top-3 left-3 z-10 chip bg-amber-100 text-amber-800 border border-amber-200">
+                      {court.noDisponibleLabel ?? "No disponible"}
+                    </span>
+                  )}
                 </div>
                 <div className="p-4">
                   <div className="flex items-start justify-between gap-3">
@@ -88,9 +102,11 @@ export default function CourtsList({
                   </div>
                   <div className="mt-3 flex items-center gap-2">
                     <span className="chip">{court.type.toUpperCase()}</span>
-                    {isSelected && (
+                    {noDisponible ? (
+                      <span className="chip bg-amber-100 text-amber-800">{court.noDisponibleLabel ?? "No disponible"}</span>
+                    ) : isSelected ? (
                       <span className="chip chip-strong">Seleccionada</span>
-                    )}
+                    ) : null}
                   </div>
                 </div>
               </button>
@@ -102,6 +118,15 @@ export default function CourtsList({
                   isSelected ? "border-default" : "",
                 ].join(" ")}
               >
+                {noDisponible ? (
+                  <div className="h-full min-h-[160px] flex flex-col items-center justify-center text-center gap-2 py-6">
+                    <span className="chip bg-amber-100 text-amber-800">{court.noDisponibleLabel ?? "No disponible"}</span>
+                    <p className="text-sm text-muted max-w-[220px]">
+                      Esta cancha no está disponible para reservar por ahora.
+                    </p>
+                  </div>
+                ) : (
+                <>
                 <div className="flex items-center justify-between gap-3 mb-3">
                   <div>
                     <p className="text-sm font-semibold text-primary">
@@ -150,6 +175,8 @@ export default function CourtsList({
                     {selectionMessage}
                   </p>
                 )}
+                </>
+                )}
               </div>
             </div>
           );
@@ -176,7 +203,7 @@ function slotClass(status: "free" | "blocked" | "occupied", isSelected: boolean)
     return "slot-occupied cursor-not-allowed";
   }
   if (status === "blocked") {
-    return "bg-surface-alt text-soft border-default opacity-60 cursor-not-allowed";
+    return "slot-blocked cursor-not-allowed";
   }
   // free
   return "bg-surface text-primary border-default hover:border-brand hover:bg-brand-soft";

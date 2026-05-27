@@ -14,6 +14,7 @@ import ViewModeToggle from "./components/ViewModeToggle";
 import AuthModal from "../components/AuthModal";
 import type { Court, CourtType } from "./types";
 import { SLOT_TIMES, getStatusForCourt } from "./utils";
+import { limaYMD, addDaysYMD, limaToUtcISO } from "@/lib/lima-time";
 import { useReservasData, type BaseTariffs } from "./hooks/useReservasData";
 import { useSession } from "../contexts/SessionContext";
 import "../styles/colors.css";
@@ -67,12 +68,13 @@ export default function Reservas() {
   const visibleCount = useMemo(() => 2, []);
 
   const allDates = useMemo(() => {
-    const today = new Date();
-    return Array.from({ length: 21 }, (_, i) => {
-      const d = new Date(today);
-      d.setDate(today.getDate() + i);
-      return d;
-    });
+    // Anclado a hora Lima: cada día es mediodía Lima del YMD correspondiente,
+    // así limaYMD(date) devuelve el día correcto en cualquier zona del navegador.
+    const base = limaYMD();
+    return Array.from(
+      { length: 21 },
+      (_, i) => new Date(`${addDaysYMD(base, i)}T12:00:00-05:00`)
+    );
   }, []);
 
   const { campuses, baseTariffs, isLoading, loadError } = useReservasData(allDates);
@@ -113,7 +115,9 @@ export default function Reservas() {
   useEffect(() => {
     if (!filteredCourts.length) { setSelectedCourtId(""); return; }
     if (!filteredCourts.some((c) => c.id === selectedCourtId)) {
-      setSelectedCourtId(filteredCourts[0].id);
+      // Prefiere la primera cancha disponible; si todas están en mantenimiento, cae a la primera
+      const firstAvailable = filteredCourts.find((c) => c.disponible !== false) ?? filteredCourts[0];
+      setSelectedCourtId(firstAvailable.id);
     }
   }, [filteredCourts, selectedCourtId]);
 
@@ -176,10 +180,14 @@ export default function Reservas() {
     const sorted = [...payload.slots].sort((a, b) => SLOT_TIMES.indexOf(a) - SLOT_TIMES.indexOf(b));
     const [sh, sm] = sorted[0].split(":").map(Number);
     const [eh, em] = sorted[sorted.length - 1].split(":").map(Number);
-    const start = new Date(payload.date);
-    start.setHours(sh, sm, 0, 0);
-    const end = new Date(payload.date);
-    end.setHours(eh, em + 60, 0, 0);
+    // Horas de pared Lima → instante UTC (el último slot ocupa hasta +1h)
+    const ymd = limaYMD(payload.date);
+    const pad = (n: number) => n.toString().padStart(2, "0");
+    const start = new Date(limaToUtcISO(ymd, `${pad(sh)}:${pad(sm)}:00`));
+    const endTotalMin = eh * 60 + em + 60;
+    const end = new Date(
+      limaToUtcISO(ymd, `${pad(Math.floor(endTotalMin / 60))}:${pad(endTotalMin % 60)}:00`)
+    );
 
     setSubmitting(true);
     try {

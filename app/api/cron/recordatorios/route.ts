@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
 import { sendRecordatorio } from "@/lib/email/sendRecordatorio";
 import { formatLimaDate, formatLimaHourRange } from "@/lib/time";
+import { limaYMD, addDaysYMD, limaToUtcISO } from "@/lib/lima-time";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -21,10 +22,11 @@ export async function GET(req: NextRequest) {
   }
 
   const supabase = createServiceClient();
-  const ahora = new Date();
-  const mananaInicio = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate() + 1);
-  const mananaFin = new Date(mananaInicio);
-  mananaFin.setDate(mananaInicio.getDate() + 1);
+  // "Mañana" en día Lima, no UTC: ventana [00:00 mañana Lima, 00:00 pasado Lima).
+  const hoyLima = limaYMD();
+  const inicioHoy = limaToUtcISO(hoyLima, "00:00:00");
+  const mananaInicio = limaToUtcISO(addDaysYMD(hoyLima, 1), "00:00:00");
+  const mananaFin = limaToUtcISO(addDaysYMD(hoyLima, 2), "00:00:00");
 
   const { data, error } = await supabase
     .from("reservas")
@@ -34,13 +36,21 @@ export async function GET(req: NextRequest) {
        canchas_deportivas (nombre, campus (nombre))`
     )
     .eq("estado", "pagada")
-    .gte("fecha_empieza", mananaInicio.toISOString())
-    .lt("fecha_empieza", mananaFin.toISOString())
+    .gte("fecha_empieza", mananaInicio)
+    .lt("fecha_empieza", mananaFin)
     .returns<ReservaRow[]>();
 
   if (error) {
     return Response.json({ error: error.message }, { status: 500 });
   }
+
+  // Dedup en una sola consulta: tipos de recordatorio ya enviados hoy.
+  const { data: yaEnviadas } = await supabase
+    .from("notificaciones")
+    .select("tipo")
+    .like("tipo", "recordatorio_24h_reserva_%")
+    .gte("creado_en", inicioHoy);
+  const tiposEnviados = new Set((yaEnviadas ?? []).map((n) => n.tipo as string));
 
   let enviados = 0;
   let fallidos = 0;
@@ -48,16 +58,8 @@ export async function GET(req: NextRequest) {
     const u = r.usuarios;
     const c = r.canchas_deportivas;
 
-    // No duplicar si ya se envió hoy
-    const inicioHoy = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate()).toISOString();
-    const { data: existente } = await supabase
-      .from("notificaciones")
-      .select("id")
-      .eq("usuarios_id", u.id)
-      .eq("tipo", `recordatorio_24h_reserva_${r.id}`)
-      .gte("creado_en", inicioHoy)
-      .maybeSingle();
-    if (existente) continue;
+    const tipo = `recordatorio_24h_reserva_${r.id}`;
+    if (tiposEnviados.has(tipo)) continue;
 
     const start = new Date(r.fecha_empieza);
     const end = new Date(r.fecha_termina);
@@ -72,7 +74,7 @@ export async function GET(req: NextRequest) {
       });
       await supabase.from("notificaciones").insert({
         usuarios_id: u.id,
-        tipo: `recordatorio_24h_reserva_${r.id}`,
+        tipo,
         titulo: "Recordatorio de reserva",
         mensaje: `Tienes una reserva mañana en ${c.campus.nombre}`,
         leido: false,

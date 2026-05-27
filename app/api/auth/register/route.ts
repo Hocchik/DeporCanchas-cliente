@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
   if (!parsed.success) {
     return Response.json({ error: "validation", issues: parsed.error.issues }, { status: 400 });
   }
-  const { nombre, email, celular, clave } = parsed.data;
+  const { nombre, email, dni, celular, clave } = parsed.data;
 
   const supabase = createServiceClient();
 
@@ -31,13 +31,22 @@ export async function POST(req: NextRequest) {
     return Response.json({ error: "rol_no_encontrado" }, { status: 500 });
   }
 
-  const { data: existing } = await supabase
+  const { data: emailExists } = await supabase
     .from("usuarios")
     .select("id")
     .eq("email", email)
     .maybeSingle();
-  if (existing) {
+  if (emailExists) {
     return Response.json({ error: "usuario_ya_existe" }, { status: 409 });
+  }
+
+  const { data: dniExists } = await supabase
+    .from("usuarios")
+    .select("id")
+    .eq("dni", dni)
+    .maybeSingle();
+  if (dniExists) {
+    return Response.json({ error: "dni_ya_existe" }, { status: 409 });
   }
 
   const clave_hash = await hashPassword(clave);
@@ -47,6 +56,7 @@ export async function POST(req: NextRequest) {
     .insert({
       nombre,
       email,
+      dni,
       celular: celular || null,
       clave_hash,
       roles_id: rolCliente.id,
@@ -55,6 +65,11 @@ export async function POST(req: NextRequest) {
     .single();
 
   if (error || !created) {
+    // Violación de UNIQUE (carrera entre el chequeo y el insert)
+    if ((error as { code?: string } | null)?.code === "23505") {
+      const dup = error?.message?.toLowerCase().includes("dni") ? "dni_ya_existe" : "usuario_ya_existe";
+      return Response.json({ error: dup }, { status: 409 });
+    }
     return Response.json({ error: "insert_failed", detail: error?.message }, { status: 500 });
   }
 

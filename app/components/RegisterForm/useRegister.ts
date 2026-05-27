@@ -13,6 +13,7 @@ type RegisterOptions = {
 
 export function useRegister(options?: RegisterOptions) {
   const [nombre, setNombre] = useState("");
+  const [dni, setDni] = useState("");
   const [celular, setCelular] = useState("");
   const [email, setEmail] = useState("");
   const [clave, setClave] = useState("");
@@ -20,6 +21,7 @@ export function useRegister(options?: RegisterOptions) {
 
   const [fieldErrors, setFieldErrors] = useState<{
     nombre?: string;
+    dni?: string;
     celular?: string;
     email?: string;
     clave?: string;
@@ -45,6 +47,14 @@ export function useRegister(options?: RegisterOptions) {
       isValid = false;
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       errors.email = "El correo electrónico no es válido.";
+      isValid = false;
+    }
+
+    if (!dni.trim()) {
+      errors.dni = "El DNI es requerido.";
+      isValid = false;
+    } else if (!/^\d{8}$/.test(dni)) {
+      errors.dni = "El DNI debe tener 8 dígitos.";
       isValid = false;
     }
 
@@ -81,18 +91,23 @@ export function useRegister(options?: RegisterOptions) {
       const res = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nombre, email, celular, clave }),
+        body: JSON.stringify({ nombre, email, dni, celular, clave }),
       });
       const data = await res.json().catch(() => ({}));
 
       if (!res.ok) {
         hideLoader();
+        if (data.error === "dni_ya_existe") {
+          setFieldErrors(prev => ({ ...prev, dni: "Ya existe una cuenta con ese DNI." }));
+        }
         const msg =
           data.error === "usuario_ya_existe"
             ? "Ya existe una cuenta con ese email."
-            : data.error === "validation"
-              ? "Revisa los datos ingresados."
-              : "No se pudo registrar. Intenta de nuevo.";
+            : data.error === "dni_ya_existe"
+              ? "Ya existe una cuenta con ese DNI."
+              : data.error === "validation"
+                ? "Revisa los datos ingresados."
+                : "No se pudo registrar. Intenta de nuevo.";
         showToast(msg, "error");
         return;
       }
@@ -110,6 +125,7 @@ export function useRegister(options?: RegisterOptions) {
 
   return {
     nombre, setNombre,
+    dni, setDni,
     celular, setCelular,
     email, setEmail,
     clave, setClave,
