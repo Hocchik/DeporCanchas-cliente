@@ -113,9 +113,19 @@ export function useReservasData(allDates: Date[]) {
         const startDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
         const endDate = new Date(startDate); endDate.setDate(startDate.getDate() + 21);
 
-        const [campusR, courtsR, availR, tarifasR, reservasR, baseR] = await Promise.all([
+        // Canchas: intentar con imagen_url; si la columna aún no existe en BD,
+        // reintentar sin ella (degradación elegante hasta correr el SQL de imágenes).
+        let courtsR = await supabase
+          .from("canchas_deportivas")
+          .select("id, campus_id, nombre, tipo_deporte, estado, imagen_url");
+        if (courtsR.error) {
+          courtsR = await supabase
+            .from("canchas_deportivas")
+            .select("id, campus_id, nombre, tipo_deporte, estado");
+        }
+
+        const [campusR, availR, tarifasR, reservasR, baseR] = await Promise.all([
           supabase.from("campus").select("id, nombre, ubicacion, estado"),
-          supabase.from("canchas_deportivas").select("id, campus_id, nombre, tipo_deporte, estado, imagen_url"),
           supabase.from("cancha_disponibilidad").select("canchasdep_id, dias_de_la_semana, hora_abre, hora_cierra"),
           supabase.from("tarifas_canchasdep").select("canchasdep_id, precio_reemplazo, tarifas (nombre, precio, prioridad, hora_empieza, hora_termina, fecha_empieza, fecha_termina)"),
           supabase.from("reservas_publicas")
@@ -190,7 +200,15 @@ export function useReservasData(allDates: Date[]) {
           setCampuses(mapped);
         }
       } catch (e) {
-        if (mounted) setLoadError(e instanceof Error ? e.message : String(e));
+        if (mounted) {
+          // Errores de Supabase no son Error: tienen .message/.code; evitar "[object Object]"
+          const anyE = e as { message?: string; details?: string; code?: string } | undefined;
+          const msg =
+            e instanceof Error ? e.message :
+            anyE?.message ? `${anyE.message}${anyE.code ? ` (${anyE.code})` : ""}` :
+            JSON.stringify(e);
+          setLoadError(msg);
+        }
       } finally {
         if (mounted) setIsLoading(false);
       }
