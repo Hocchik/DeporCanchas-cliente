@@ -14,7 +14,7 @@ import ViewModeToggle from "./components/ViewModeToggle";
 import AuthModal from "../components/AuthModal";
 import type { Court, CourtType } from "./types";
 import { SLOT_TIMES, getStatusForCourt } from "./utils";
-import { limaYMD, addDaysYMD, limaToUtcISO } from "@/lib/lima-time";
+import { limaYMD, addDaysYMD, limaToUtcISO, dowYMD } from "@/lib/lima-time";
 import { useReservasData, type BaseTariffs } from "./hooks/useReservasData";
 import { useSession } from "../contexts/SessionContext";
 import "../styles/colors.css";
@@ -46,17 +46,28 @@ const isDateInRange = (dateKey: string, start: string | null, end: string | null
   return true;
 };
 
+/**
+ * Espejo simplificado de `lib/reservas/calcularPrecio` para mostrar el precio
+ * "desde" en la card de la cancha. Toma TODAS las reglas enlazadas a la cancha,
+ * filtra por día Lima + rango de fechas (ignora la hora, porque "desde" es
+ * agregado del día), ordena por prioridad ASC y usa la primera. Si ninguna
+ * regla aplica, cae a `precioDefault` de la cancha; como último recurso usa la
+ * tarifa base legacy por deporte (canchas viejas sin default).
+ */
 const resolveCourtPrice = (court: Court, date: Date, baseTariffs: BaseTariffs) => {
-  const dateKey = toDateKey(date);
+  const ymd = limaYMD(date);
+  const dow = dowYMD(ymd); // 0=Dom..6=Sáb (hora Lima)
   const sportKey = court.sportKey ?? "futbol7";
-  const candidates = (court.tariffs ?? [])
-    .filter((t) => matchesSportKey(sportKey, t.nombre))
-    .filter((t) => isDateInRange(dateKey, t.fecha_empieza, t.fecha_termina));
 
-  if (candidates.length) {
-    candidates.sort((a, b) => (a.prioridad ?? 0) - (b.prioridad ?? 0));
-    return candidates[0].precio ?? 0;
+  const aplicables = (court.tariffs ?? [])
+    .filter((t) => !t.dias || t.dias.length === 0 || t.dias.includes(dow))
+    .filter((t) => isDateInRange(ymd, t.fecha_empieza, t.fecha_termina));
+
+  if (aplicables.length) {
+    aplicables.sort((a, b) => (a.prioridad ?? 0) - (b.prioridad ?? 0));
+    return aplicables[0].precio ?? 0;
   }
+  if (court.precioDefault != null) return court.precioDefault;
   return baseTariffs[sportKey] ?? 0;
 };
 
