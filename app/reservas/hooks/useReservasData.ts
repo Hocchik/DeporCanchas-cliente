@@ -7,7 +7,7 @@ import { SLOT_TIMES } from "../utils";
 import { limaYMD, limaMinutesOfDay, dowYMD } from "@/lib/lima-time";
 
 type CampusRow = { id: number; nombre: string; ubicacion: string; estado: string };
-type CourtRow = { id: number; campus_id: number; nombre: string; tipo_deporte: string; estado: string; imagen_url: string | null };
+type CourtRow = { id: number; campus_id: number; nombre: string; tipo_deporte: string; estado: string; imagen_url: string | null; precio_default: number | null };
 type AvailabilityRow = { canchasdep_id: number; dias_de_la_semana: number; hora_abre: string; hora_cierra: string };
 type ReservaRow = { canchasdep_id: number; fecha_empieza: string; fecha_termina: string; estado: string | null };
 type TarifaRow = {
@@ -15,6 +15,7 @@ type TarifaRow = {
   precio_reemplazo: number | null;
   tarifas: {
     nombre: string | null; precio: number; prioridad: number;
+    dias: number[] | null;
     hora_empieza: string | null; hora_termina: string | null;
     fecha_empieza: string | null; fecha_termina: string | null;
   }[];
@@ -113,11 +114,16 @@ export function useReservasData(allDates: Date[]) {
         const startDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
         const endDate = new Date(startDate); endDate.setDate(startDate.getDate() + 21);
 
-        // Canchas: intentar con imagen_url; si la columna aún no existe en BD,
-        // reintentar sin ella (degradación elegante hasta correr el SQL de imágenes).
+        // Canchas: intentar con imagen_url + precio_default; si alguna columna no existe
+        // en BD aún, reintentar con un subconjunto progresivamente menor.
         let courtsR = await supabase
           .from("canchas_deportivas")
-          .select("id, campus_id, nombre, tipo_deporte, estado, imagen_url");
+          .select("id, campus_id, nombre, tipo_deporte, estado, imagen_url, precio_default");
+        if (courtsR.error) {
+          courtsR = await supabase
+            .from("canchas_deportivas")
+            .select("id, campus_id, nombre, tipo_deporte, estado, imagen_url");
+        }
         if (courtsR.error) {
           courtsR = await supabase
             .from("canchas_deportivas")
@@ -127,7 +133,7 @@ export function useReservasData(allDates: Date[]) {
         const [campusR, availR, tarifasR, reservasR, baseR] = await Promise.all([
           supabase.from("campus").select("id, nombre, ubicacion, estado"),
           supabase.from("cancha_disponibilidad").select("canchasdep_id, dias_de_la_semana, hora_abre, hora_cierra"),
-          supabase.from("tarifas_canchasdep").select("canchasdep_id, precio_reemplazo, tarifas (nombre, precio, prioridad, hora_empieza, hora_termina, fecha_empieza, fecha_termina)"),
+          supabase.from("tarifas_canchasdep").select("canchasdep_id, precio_reemplazo, tarifas (nombre, precio, prioridad, dias, hora_empieza, hora_termina, fecha_empieza, fecha_termina)"),
           supabase.from("reservas_publicas")
             .select("canchasdep_id, fecha_empieza, fecha_termina, estado")
             .gte("fecha_empieza", startDate.toISOString())
@@ -188,6 +194,7 @@ export function useReservasData(allDates: Date[]) {
             return {
               id: String(co.id), name: co.nombre, type, sportKey,
               tariffs: tariffCandidates, pricePerHour: 0,
+              precioDefault: (co as { precio_default: number | null }).precio_default ?? null,
               image: co.imagen_url || courtImageForType(type), availability,
               disponible, noDisponibleLabel,
             } satisfies Court;

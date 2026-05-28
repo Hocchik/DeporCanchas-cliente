@@ -18,9 +18,12 @@ export type Court = {
   /** etiqueta a mostrar cuando no está disponible (ej. "En mantenimiento") */
   noDisponibleLabel?: string;
   sportKey?: "futbol7" | "futbol11" | "tenis" | "padel";
+  /** Precio default de la cancha (fallback cuando ninguna regla aplica) */
+  precioDefault?: number | null;
   tariffs?: {
     precio: number;
     prioridad: number;
+    dias: number[] | null;
     hora_empieza: string | null;
     hora_termina: string | null;
     fecha_empieza: string | null;
