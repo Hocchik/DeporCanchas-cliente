@@ -1,5 +1,5 @@
 import "server-only";
-import { getResend, FROM } from "./client";
+import { sendMail } from "./client";
 
 type Input = {
   to: string; cliente: string; campus: string; cancha: string;
@@ -7,7 +7,6 @@ type Input = {
 };
 
 export async function sendRecordatorio(input: Input) {
-  const resend = getResend();
   const html = `
     <div style="font-family:sans-serif;max-width:560px;margin:0 auto;color:#0f2f1f;">
       <h2>Recordatorio de tu reserva</h2>
@@ -21,8 +20,7 @@ export async function sendRecordatorio(input: Input) {
       <p>¡Te esperamos!</p>
     </div>
   `;
-  await resend.emails.send({
-    from: FROM,
+  await sendMail({
     to: input.to,
     subject: `Recordatorio: tu reserva mañana en ${input.campus}`,
     html,
