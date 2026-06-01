@@ -44,7 +44,7 @@ export default function CourtsList({
           const noDisponible = court.disponible === false;
 
           return (
-            <div key={court.id} className="grid grid-cols-1 md:grid-cols-[1fr_1fr] gap-4">
+            <div key={court.id} className="grid grid-cols-1 sm:grid-cols-[1fr_1fr] gap-4">
               {/* Card de la cancha */}
               <button
                 type="button"

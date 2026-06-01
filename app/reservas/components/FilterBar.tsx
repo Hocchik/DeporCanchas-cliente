@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import { SparklesIcon, TrophyIcon, BoltIcon, QueueListIcon, ChevronLeftIcon, ChevronRightIcon } from "@heroicons/react/24/solid";
 import type { CourtType } from "../types";
 import { limaYMD, dowYMD } from "@/lib/lima-time";
@@ -13,7 +13,14 @@ interface FilterBarProps {
   setWindowStart: (idx: number) => void;
   allDates: Date[];
   visibleCount: number;
+  /** Reportado al padre para que ajuste `visibleCount` al ancho real. */
+  onVisibleCountChange?: (n: number) => void;
 }
+
+// Cada píldora ocupa min 64px (ver `min-w-[64px]` abajo) y entre píldoras hay
+// gap-2 (8px). Mantener sincronizado con el JSX.
+const PILL_MIN_WIDTH = 64;
+const PILL_GAP = 8;
 
 const WEEKDAY_LABELS = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
 
@@ -27,7 +34,30 @@ export default function FilterBar({
   setWindowStart,
   allDates,
   visibleCount,
+  onVisibleCountChange,
 }: FilterBarProps) {
+  const pillsRowRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!onVisibleCountChange || typeof ResizeObserver === "undefined") return;
+    const el = pillsRowRef.current;
+    if (!el) return;
+
+    const compute = () => {
+      const width = el.clientWidth;
+      if (width <= 0) return;
+      // n*pill + (n-1)*gap ≤ width  ⇒  n ≤ (width + gap) / (pill + gap)
+      const fit = Math.floor((width + PILL_GAP) / (PILL_MIN_WIDTH + PILL_GAP));
+      const next = Math.max(1, Math.min(allDates.length || 1, fit));
+      if (next !== visibleCount) onVisibleCountChange(next);
+    };
+
+    compute();
+    const ro = new ResizeObserver(compute);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [allDates.length, visibleCount, onVisibleCountChange]);
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-5">
       <div className="card-soft p-4">
@@ -71,7 +101,7 @@ export default function FilterBar({
           >
             <ChevronLeftIcon className="w-4 h-4" />
           </button>
-          <div className="flex items-center gap-2 flex-1">
+          <div ref={pillsRowRef} className="flex items-center gap-2 flex-1 min-w-0">
             {visibleDates.map((date, index) => {
               const absoluteIndex = windowStart + index;
               const isToday = absoluteIndex === 0;
