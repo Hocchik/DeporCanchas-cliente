@@ -97,18 +97,28 @@ export function useRegister(options?: RegisterOptions) {
 
       if (!res.ok) {
         hideLoader();
+        // Marcar el campo conflictivo en línea cuando se puede identificar
         if (data.error === "dni_ya_existe") {
           setFieldErrors(prev => ({ ...prev, dni: "Ya existe una cuenta con ese DNI." }));
+        } else if (data.error === "usuario_ya_existe") {
+          setFieldErrors(prev => ({ ...prev, email: "Ya existe una cuenta con ese email." }));
+        } else if (data.error === "celular_ya_existe") {
+          setFieldErrors(prev => ({ ...prev, celular: "Ya existe una cuenta con ese celular." }));
         }
-        const msg =
-          data.error === "usuario_ya_existe"
-            ? "Ya existe una cuenta con ese email."
-            : data.error === "dni_ya_existe"
-              ? "Ya existe una cuenta con ese DNI."
-              : data.error === "validation"
-                ? "Revisa los datos ingresados."
-                : "No se pudo registrar. Intenta de nuevo.";
-        showToast(msg, "error");
+        // Mensaje al toast: prioriza un texto humano según el código; si el
+        // código no está mapeado, mostramos el detail real (no genérico) para
+        // que se vea qué falló (validación, constraint, etc.).
+        const codeMsg: Record<string, string> = {
+          usuario_ya_existe: "Ya existe una cuenta con ese email.",
+          dni_ya_existe: "Ya existe una cuenta con ese DNI.",
+          celular_ya_existe: "Ya existe una cuenta con ese celular.",
+          unique_violation: "Conflicto con un dato existente.",
+          validation: "Revisa los datos ingresados.",
+          rol_no_encontrado: "Configuración de roles inválida (contacta soporte).",
+          invalid_json: "Petición inválida.",
+        };
+        const msg = codeMsg[data.error] ?? (data.detail || data.error || "No se pudo registrar.");
+        showToast(`${msg}${data.detail && codeMsg[data.error] ? ` — ${data.detail}` : ""}`, "error");
         return;
       }
 

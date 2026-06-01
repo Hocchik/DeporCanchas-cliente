@@ -74,7 +74,7 @@ export default function MisReservasPage() {
         </div>
 
         {loadingList ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {[0, 1].map((i) => (
               <div key={i} className="card-soft p-4 flex gap-4 animate-pulse-soft">
                 <div className="h-24 w-32 rounded-xl bg-surface-alt" />
@@ -106,7 +106,7 @@ export default function MisReservasPage() {
             )}
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {reservas.map((r) => (
               <ReservationCard key={r.id} reserva={r} onClick={() => setSelected(r)} />
             ))}

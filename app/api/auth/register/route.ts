@@ -16,7 +16,11 @@ export async function POST(req: NextRequest) {
 
   const parsed = registerSchema.safeParse(body);
   if (!parsed.success) {
-    return Response.json({ error: "validation", issues: parsed.error.issues }, { status: 400 });
+    // Devolvemos también un mensaje legible (primer issue) para que la UI lo muestre directo
+    const first = parsed.error.issues[0];
+    const field = first?.path?.join(".") || "";
+    const detail = field ? `${field}: ${first?.message}` : first?.message;
+    return Response.json({ error: "validation", detail, issues: parsed.error.issues }, { status: 400 });
   }
   const { nombre, email, dni, celular, clave } = parsed.data;
 
@@ -65,12 +69,17 @@ export async function POST(req: NextRequest) {
     .single();
 
   if (error || !created) {
-    // Violación de UNIQUE (carrera entre el chequeo y el insert)
-    if ((error as { code?: string } | null)?.code === "23505") {
-      const dup = error?.message?.toLowerCase().includes("dni") ? "dni_ya_existe" : "usuario_ya_existe";
-      return Response.json({ error: dup }, { status: 409 });
+    const errAny = error as { code?: string; message?: string; details?: string } | null;
+    // Violación de UNIQUE: identificamos por columna en el mensaje de Postgres
+    if (errAny?.code === "23505") {
+      const m = (errAny.message || "").toLowerCase();
+      if (m.includes("dni")) return Response.json({ error: "dni_ya_existe", detail: errAny.message }, { status: 409 });
+      if (m.includes("email")) return Response.json({ error: "usuario_ya_existe", detail: errAny.message }, { status: 409 });
+      if (m.includes("celular")) return Response.json({ error: "celular_ya_existe", detail: errAny.message }, { status: 409 });
+      // Constraint UNIQUE en otra columna no esperada
+      return Response.json({ error: "unique_violation", detail: errAny.message }, { status: 409 });
     }
-    return Response.json({ error: "insert_failed", detail: error?.message }, { status: 500 });
+    return Response.json({ error: "insert_failed", detail: errAny?.message || errAny?.details || "sin detalle" }, { status: 500 });
   }
 
   const token = await signSession({ uid: created.id, rid: created.roles_id });

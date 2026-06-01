@@ -76,7 +76,9 @@ export default function Reservas() {
   const { user } = useSession();
   const isAuthed = Boolean(user);
 
-  const visibleCount = useMemo(() => 2, []);
+  // visibleCount se mide dinámicamente desde FilterBar según el ancho real
+  // del carrusel de fechas; mientras llega el primer reporte usamos 2.
+  const [visibleCount, setVisibleCount] = useState(2);
 
   const allDates = useMemo(() => {
     // Anclado a hora Lima: cada día es mediodía Lima del YMD correspondiente,
@@ -141,6 +143,13 @@ export default function Reservas() {
     if (selectedDateIndex < windowStart) setSelectedDateIndex(windowStart);
     if (selectedDateIndex > windowStart + visibleCount - 1) setSelectedDateIndex(windowStart + visibleCount - 1);
   }, [selectedDateIndex, windowStart, visibleCount]);
+
+  // Cuando visibleCount crece (al ensanchar la ventana) el windowStart puede
+  // dejar el carrusel "fuera de rango"; lo clampeamos al máximo válido.
+  useEffect(() => {
+    const max = Math.max(0, allDates.length - visibleCount);
+    if (windowStart > max) setWindowStart(max);
+  }, [windowStart, visibleCount, allDates.length]);
 
   const selectedCourt = pricedCourts.find((c) => c.id === selectedCourtId);
 
@@ -257,7 +266,7 @@ export default function Reservas() {
           </div>
         ) : (
           <>
-            <div className="md:hidden mb-4">
+            <div className="lg:hidden mb-4">
               <button
                 type="button"
                 onClick={() => setIsCampusMenuOpen(true)}
@@ -276,14 +285,14 @@ export default function Reservas() {
               onSelect={setSelectedCampusId}
             />
 
-            <div className="grid grid-cols-1 gap-6 items-start md:grid-cols-[260px_minmax(0,1fr)_320px]">
+            <div className="grid grid-cols-1 gap-6 items-start lg:grid-cols-[240px_minmax(0,1fr)_320px] xl:grid-cols-[260px_minmax(0,1fr)_340px]">
               <CampusSidebar
                 campuses={campuses}
                 selectedCampusId={selectedCampusId}
                 onSelect={setSelectedCampusId}
               />
 
-              <section className="order-2 md:order-2 space-y-5">
+              <section className="order-2 lg:order-2 space-y-5">
                 <div>
                   <div className="flex flex-wrap items-center justify-between gap-4">
                     <div>
@@ -302,6 +311,7 @@ export default function Reservas() {
                     setWindowStart={setWindowStart}
                     allDates={allDates}
                     visibleCount={visibleCount}
+                    onVisibleCountChange={setVisibleCount}
                   />
                 </div>
 
@@ -322,7 +332,7 @@ export default function Reservas() {
                 )}
               </section>
 
-              <div className="order-3 md:order-3 h-auto md:sticky md:top-20 self-start">
+              <div className="order-3 lg:order-3 h-auto lg:sticky lg:top-20 self-start">
                 <CourtDetails
                   selectedCourt={selectedCourt}
                   selectedCampus={selectedCampus}

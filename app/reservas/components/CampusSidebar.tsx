@@ -14,7 +14,7 @@ interface CampusSidebarProps {
 
 export default function CampusSidebar({ campuses, selectedCampusId, onSelect }: CampusSidebarProps) {
   return (
-    <aside className="order-1 hidden md:order-1 md:block md:sticky md:top-20 self-start">
+    <aside className="order-1 hidden lg:order-1 lg:block lg:sticky lg:top-20 self-start">
       <div className="card-soft p-5">
         <h2 className="font-display font-semibold text-lg text-primary mb-4">
           Sedes
