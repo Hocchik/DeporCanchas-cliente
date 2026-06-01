@@ -1,5 +1,5 @@
 import "server-only";
-import { getResend, FROM } from "./client";
+import { sendMail } from "./client";
 
 type ConfirmacionInput = {
   to: string;
@@ -14,7 +14,6 @@ type ConfirmacionInput = {
 };
 
 export async function sendConfirmacion(input: ConfirmacionInput) {
-  const resend = getResend();
   const html = `
     <div style="font-family:sans-serif;max-width:560px;margin:0 auto;color:#0f2f1f;">
       <h2>¡Pago confirmado!</h2>
@@ -29,8 +28,7 @@ export async function sendConfirmacion(input: ConfirmacionInput) {
       <p>Adjuntamos tu voucher. También puedes descargarlo desde "Mis Reservas".</p>
     </div>
   `;
-  await resend.emails.send({
-    from: FROM,
+  await sendMail({
     to: input.to,
     subject: `Confirmación de reserva - ${input.campus}`,
     html,

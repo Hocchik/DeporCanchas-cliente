@@ -1,5 +1,5 @@
 import "server-only";
-import { getResend, FROM } from "./client";
+import { sendMail } from "./client";
 
 type Input = {
   to: string;
@@ -17,7 +17,6 @@ type Input = {
 };
 
 export async function sendCancelacion(input: Input) {
-  const resend = getResend();
   const contexto =
     input.reembolso?.porcentaje === 100
       ? "Cancelaste con <strong>4 días o más</strong> de anticipación, por lo que te corresponde el <strong>reembolso completo (100%)</strong>."
@@ -69,8 +68,7 @@ export async function sendCancelacion(input: Input) {
     </div>
   `;
 
-  await resend.emails.send({
-    from: FROM,
+  await sendMail({
     to: input.to,
     subject: `Reserva cancelada — ${input.campus}`,
     html,
