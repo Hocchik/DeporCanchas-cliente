@@ -130,6 +130,16 @@ export function useReservasData(allDates: Date[]) {
             .select("id, campus_id, nombre, tipo_deporte, estado");
         }
 
+        // tipos_cancha: lectura pública (anon) para resolver etiqueta del tipo.
+        // Si la tabla no existe / RLS lo niega, seguimos sin mapeo (cae a valor raw).
+        let tiposR = await supabase
+          .from("tipos_cancha")
+          .select("valor, etiqueta, activo")
+          .eq("activo", true);
+        if (tiposR.error) {
+          tiposR = await supabase.from("tipos_cancha").select("valor, etiqueta");
+        }
+
         const [campusR, availR, tarifasR, reservasR, baseR] = await Promise.all([
           supabase.from("campus").select("id, nombre, ubicacion, estado"),
           supabase.from("cancha_disponibilidad").select("canchasdep_id, dias_de_la_semana, hora_abre, hora_cierra"),
@@ -146,6 +156,9 @@ export function useReservasData(allDates: Date[]) {
 
         const campusRows = (campusR.data ?? []) as CampusRow[];
         const courtRows = (courtsR.data ?? []) as CourtRow[];
+        const tiposMap = new Map<string, string>(
+          (tiposR.data ?? []).map((t: { valor: string; etiqueta: string }) => [t.valor, t.etiqueta])
+        );
         const availabilityRows = (availR.data ?? []) as AvailabilityRow[];
         const tarifaRows = (tarifasR.data ?? []) as TarifaRow[];
         const reservaRows = (reservasR.data ?? []) as ReservaRow[];
@@ -193,6 +206,8 @@ export function useReservasData(allDates: Date[]) {
 
             return {
               id: String(co.id), name: co.nombre, type, sportKey,
+              sportValue: co.tipo_deporte,
+              sportLabel: tiposMap.get(co.tipo_deporte) || co.tipo_deporte,
               tariffs: tariffCandidates, pricePerHour: 0,
               precioDefault: (co as { precio_default: number | null }).precio_default ?? null,
               image: co.imagen_url || courtImageForType(type), availability,

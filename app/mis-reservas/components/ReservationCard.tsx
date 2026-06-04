@@ -28,7 +28,7 @@ const ESTADOS: Record<string, { label: string; cls: string }> = {
   pagada:    { label: "Pagada",    cls: "bg-accent text-brand" },
   pendiente: { label: "Pendiente", cls: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-200" },
   cancelada: { label: "Cancelada", cls: "bg-surface-alt text-muted border border-default" },
-  expirada:  { label: "Expirada",  cls: "bg-danger-soft text-danger" },
+  expirada:  { label: "No completada",  cls: "bg-danger-soft text-danger" },
 };
 
 function imageForType(t: string): string {

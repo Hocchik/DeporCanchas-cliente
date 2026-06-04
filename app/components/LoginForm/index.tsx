@@ -49,7 +49,7 @@ export default function LoginForm({
       <Field
         label="Contraseña"
         error={fieldErrors.clave}
-        right={<a href="#" className="text-xs font-medium text-brand hover:underline">¿Olvidaste tu contraseña?</a>}
+        right={<a href="/recuperar" className="text-xs font-medium text-brand hover:underline">¿Olvidaste tu contraseña?</a>}
       >
         <FieldShell hasError={!!fieldErrors.clave}>
           <LockClosedIcon className="w-5 h-5 text-brand opacity-70 shrink-0" />

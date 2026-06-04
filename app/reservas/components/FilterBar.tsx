@@ -1,11 +1,14 @@
 import React, { useEffect, useRef } from "react";
-import { SparklesIcon, TrophyIcon, BoltIcon, QueueListIcon, ChevronLeftIcon, ChevronRightIcon } from "@heroicons/react/24/solid";
-import type { CourtType } from "../types";
+import { SparklesIcon, TrophyIcon, BoltIcon, QueueListIcon, TagIcon, ChevronLeftIcon, ChevronRightIcon } from "@heroicons/react/24/solid";
 import { limaYMD, dowYMD } from "@/lib/lima-time";
 
+export type SportOption = { id: string; label: string };
+
 interface FilterBarProps {
-  selectedSport: "all" | CourtType;
-  setSelectedSport: (sport: "all" | CourtType) => void;
+  selectedSport: string;
+  setSelectedSport: (sport: string) => void;
+  /** Opciones dinámicas derivadas de los tipos de cancha presentes en el campus. */
+  sportOptions: SportOption[];
   visibleDates: Date[];
   selectedDateIndex: number;
   setSelectedDateIndex: (idx: number) => void;
@@ -24,9 +27,18 @@ const PILL_GAP = 8;
 
 const WEEKDAY_LABELS = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
 
+/** Icono por id conocido; cualquier id nuevo (Vóley, Básquet, etc.) usa TagIcon. */
+const ICON_BY_ID: Record<string, React.ComponentType<{ className?: string }>> = {
+  all: SparklesIcon,
+  futbol: TrophyIcon,
+  Tenis: BoltIcon,
+  Padel: QueueListIcon,
+};
+
 export default function FilterBar({
   selectedSport,
   setSelectedSport,
+  sportOptions,
   visibleDates,
   selectedDateIndex,
   setSelectedDateIndex,
@@ -63,18 +75,14 @@ export default function FilterBar({
       <div className="card-soft p-4">
         <p className="text-xs font-semibold text-muted uppercase tracking-wider mb-3">Deporte</p>
         <div className="flex flex-wrap gap-2">
-          {[
-            { id: "all", label: "Todos", icon: SparklesIcon },
-            { id: "futbol", label: "Fútbol", icon: TrophyIcon },
-            { id: "tenis", label: "Tenis", icon: BoltIcon },
-            { id: "padel", label: "Pádel", icon: QueueListIcon },
-          ].map((option) => {
+          {sportOptions.map((option) => {
             const active = selectedSport === option.id;
+            const Icon = ICON_BY_ID[option.id] ?? TagIcon;
             return (
               <button
                 key={option.id}
                 type="button"
-                onClick={() => setSelectedSport(option.id as "all" | CourtType)}
+                onClick={() => setSelectedSport(option.id)}
                 className={[
                   "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold border transition",
                   active
@@ -82,7 +90,7 @@ export default function FilterBar({
                     : "bg-transparent text-primary border-default hover:border-strong hover:bg-brand-soft",
                 ].join(" ")}
               >
-                <option.icon className="w-3.5 h-3.5" />
+                <Icon className="w-3.5 h-3.5" />
                 {option.label}
               </button>
             );

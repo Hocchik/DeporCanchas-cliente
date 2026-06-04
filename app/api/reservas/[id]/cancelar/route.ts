@@ -3,6 +3,7 @@ import { requireUser, UnauthorizedError, unauthorizedResponse } from "@/lib/auth
 import { createServiceClient } from "@/lib/supabase/server";
 import { calcularPoliticaReembolso, calcularMontoReembolso } from "@/lib/reembolsos";
 import { sendCancelacion } from "@/lib/email/sendCancelacion";
+import { notifyAdmin } from "@/lib/notifications/notifyAdmin";
 import { formatLimaDate, formatLimaHourRange } from "@/lib/time";
 
 export const runtime = "nodejs";
@@ -154,6 +155,27 @@ export async function POST(_req: NextRequest, ctx: { params: Promise<{ id: strin
     });
   } catch (e) {
     console.error("email_cancelacion_failed", e);
+  }
+
+  // Notificación para el panel admin (no bloquea respuesta si falla)
+  try {
+    const start = new Date(reserva.fecha_empieza);
+    const end = new Date(reserva.fecha_termina);
+    const cancha = reserva.canchas_deportivas;
+    const campus = cancha.campus;
+    await notifyAdmin({
+      event: "reserva_cancelada",
+      cliente_id: user.id,
+      cliente_nombre: user.nombre,
+      cliente_email: user.email,
+      reserva_id: reserva.id,
+      cancha_nombre: cancha.nombre,
+      campus_nombre: campus.nombre,
+      fecha_hora: `${formatLimaDate(start)} ${formatLimaHourRange(start, end)}`,
+      reembolso: aplicaReembolso ? monto_reembolso : undefined,
+    });
+  } catch (e) {
+    console.error("notifyAdmin reserva_cancelada failed", e);
   }
 
   return Response.json({
