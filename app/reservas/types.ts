@@ -18,6 +18,10 @@ export type Court = {
   /** etiqueta a mostrar cuando no está disponible (ej. "En mantenimiento") */
   noDisponibleLabel?: string;
   sportKey?: "futbol7" | "futbol11" | "tenis" | "padel";
+  /** Valor crudo del tipo (lo guardado en `canchas_deportivas.tipo_deporte`). */
+  sportValue?: string;
+  /** Etiqueta a mostrar (de `tipos_cancha.etiqueta`, con tildes). */
+  sportLabel?: string;
   /** Precio default de la cancha (fallback cuando ninguna regla aplica) */
   precioDefault?: number | null;
   tariffs?: {

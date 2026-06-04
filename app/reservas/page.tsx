@@ -93,7 +93,8 @@ export default function Reservas() {
   const { campuses, baseTariffs, isLoading, loadError } = useReservasData(allDates);
 
   const [selectedCampusId, setSelectedCampusId] = useState("");
-  const [selectedSport, setSelectedSport] = useState<"all" | CourtType>("all");
+  // selectedSport ahora es un id libre: "all" | "futbol" | el `valor` raw del tipo (ej. "Tenis", "Padel", "Voley", etc.)
+  const [selectedSport, setSelectedSport] = useState<string>("all");
   const [selectedCourtId, setSelectedCourtId] = useState("");
   const [selectedDateIndex, setSelectedDateIndex] = useState(0);
   const [windowStart, setWindowStart] = useState(0);
@@ -115,10 +116,36 @@ export default function Reservas() {
     if (campuses.length && !selectedCampusId) setSelectedCampusId(campuses[0].id);
   }, [campuses, selectedCampusId]);
 
+  // Opciones de deporte derivadas del campus activo: "Todos" + "Fútbol" (agrupa
+  // F7+F11 si hay) + cada otro tipo único como standalone (Tenis, Pádel, y
+  // cualquier tipo nuevo creado desde el admin como Vóley, Básquet, etc.).
+  const availableSports = useMemo(() => {
+    const courts = selectedCampus?.courts ?? [];
+    const out: { id: string; label: string }[] = [{ id: "all", label: "Todos" }];
+    const hasFutbol = courts.some((c) => /futbol/i.test(c.sportValue ?? c.type ?? ""));
+    if (hasFutbol) out.push({ id: "futbol", label: "Fútbol" });
+    const seen = new Set<string>();
+    for (const c of courts) {
+      const v = c.sportValue ?? "";
+      if (!v || /futbol/i.test(v)) continue;
+      if (seen.has(v)) continue;
+      seen.add(v);
+      out.push({ id: v, label: c.sportLabel || v });
+    }
+    return out;
+  }, [selectedCampus]);
+
   const filteredCourts = useMemo(() => {
     const courts = selectedCampus?.courts ?? [];
-    return selectedSport === "all" ? courts : courts.filter((c) => c.type === selectedSport);
+    if (selectedSport === "all") return courts;
+    if (selectedSport === "futbol") return courts.filter((c) => /futbol/i.test(c.sportValue ?? c.type ?? ""));
+    return courts.filter((c) => (c.sportValue ?? "") === selectedSport);
   }, [selectedCampus, selectedSport]);
+
+  // Si el deporte seleccionado ya no existe en el campus actual, volver a "all".
+  useEffect(() => {
+    if (!availableSports.some((o) => o.id === selectedSport)) setSelectedSport("all");
+  }, [availableSports, selectedSport]);
 
   const pricedCourts = useMemo(
     () => filteredCourts.map((c) => ({ ...c, pricePerHour: resolveCourtPrice(c, selectedDate, baseTariffs) })),
@@ -158,7 +185,20 @@ export default function Reservas() {
     return getStatusForCourt(selectedCourt, selectedDate);
   }, [selectedCourt, selectedDate]);
 
-  const handleSlotToggle = (time: string) => {
+  const handleSlotToggle = (courtId: string, time: string) => {
+    // Click en un slot de OTRA cancha: cambio automático + aviso.
+    // Sólo permitimos reservar en una cancha a la vez.
+    if (courtId !== selectedCourtId) {
+      const targetCourt = pricedCourts.find((c) => c.id === courtId);
+      if (!targetCourt || targetCourt.disponible === false) return;
+      const targetSlot = selectedDate ? getStatusForCourt(targetCourt, selectedDate).find((s) => s.time === time) : null;
+      if (!targetSlot || targetSlot.status !== "free") return;
+      setSelectedCourtId(courtId);
+      setSelectedSlots([time]);
+      setSelectionMessage("Cambiaste de cancha. Solo puedes reservar en una cancha a la vez.");
+      return;
+    }
+
     const slot = selectedCourtSlots.find((entry) => entry.time === time);
     if (!slot || slot.status !== "free") return;
 
@@ -304,6 +344,7 @@ export default function Reservas() {
                   <FilterBar
                     selectedSport={selectedSport}
                     setSelectedSport={setSelectedSport}
+                    sportOptions={availableSports}
                     visibleDates={visibleDates}
                     selectedDateIndex={selectedDateIndex}
                     setSelectedDateIndex={setSelectedDateIndex}

@@ -11,7 +11,7 @@ type CourtsListProps = {
   selectedSlots: string[];
   selectionMessage: string;
   onSelectCourt: (courtId: string) => void;
-  onToggleSlot: (time: string) => void;
+  onToggleSlot: (courtId: string, time: string) => void;
 };
 
 export default function CourtsList({
@@ -136,26 +136,20 @@ export default function CourtsList({
                       {selectedDate ? selectedDate.toLocaleDateString("es-PE", { weekday: "long", day: "2-digit", month: "long" }) : "Selecciona una fecha"}
                     </p>
                   </div>
-                  {!isSelected && (
-                    <span className="text-xs font-semibold text-brand">
-                      ← Elige la cancha
-                    </span>
-                  )}
                 </div>
 
-                <div className={[
-                  "grid grid-cols-2 gap-2",
-                  isSelected ? "" : "opacity-50 pointer-events-none",
-                ].join(" ")}>
+                <div className="grid grid-cols-2 gap-2">
                   {slotsToRender.map((slot) => {
                     const isSelectedSlot = isSelected && selectedSlots.includes(slot.time);
                     const cls = slotClass(slot.status, isSelectedSlot);
-                    const disabled = !isSelected || slot.status !== "free";
+                    // Permitimos clic en slots libres aunque la cancha no esté
+                    // seleccionada — el handler cambia de cancha automáticamente.
+                    const disabled = slot.status !== "free";
                     return (
                       <button
                         key={slot.time}
                         type="button"
-                        onClick={() => onToggleSlot(slot.time)}
+                        onClick={() => onToggleSlot(court.id, slot.time)}
                         disabled={disabled}
                         className={[
                           "px-2 py-2 rounded-lg text-sm font-semibold border transition",

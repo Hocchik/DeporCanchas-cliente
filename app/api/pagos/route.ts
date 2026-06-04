@@ -5,6 +5,7 @@ import { createServiceClient } from "@/lib/supabase/server";
 import { pagoTarjetaSchema, pagoYapeSchema, type PagoTarjetaInput } from "@/lib/validators/pago";
 import { generarVoucherPng } from "@/lib/voucher/render";
 import { sendConfirmacion } from "@/lib/email/sendConfirmacion";
+import { notifyAdmin } from "@/lib/notifications/notifyAdmin";
 import { formatLimaDate, formatLimaTime12, formatLimaHourRange, diffHours } from "@/lib/time";
 
 export const runtime = "nodejs";
@@ -193,6 +194,23 @@ export async function POST(req: NextRequest) {
   // Si el user no tenía DNI y pagó con tarjeta, guardar el DNI del titular en su perfil
   if (cardData && !user.dni) {
     await supabase.from("usuarios").update({ dni: cardData.titular_dni }).eq("id", user.id);
+  }
+
+  // Notificación para el panel admin (no bloquea respuesta si falla)
+  try {
+    await notifyAdmin({
+      event: "reserva_pagada",
+      cliente_id: user.id,
+      cliente_nombre: user.nombre,
+      cliente_email: user.email,
+      reserva_id: reserva.id,
+      cancha_nombre: cancha.nombre,
+      campus_nombre: campus.nombre,
+      fecha_hora: `${formatLimaDate(start)} ${formatLimaHourRange(start, end)}`,
+      monto: reserva.precio_total,
+    });
+  } catch (e) {
+    console.error("notifyAdmin reserva_pagada failed", e);
   }
 
   // Enviar email (no bloquea respuesta si falla)
