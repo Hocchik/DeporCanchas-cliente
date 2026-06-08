@@ -2,6 +2,7 @@
 import React from "react";
 import { ArrowRightIcon, UserIcon, EnvelopeIcon, LockClosedIcon, EyeIcon, EyeSlashIcon, PhoneIcon, IdentificationIcon } from '@heroicons/react/24/solid';
 import { useRegister } from "./useRegister";
+import PasswordStrength from "../PasswordStrength";
 
 export default function RegisterForm({
   onRegister,
@@ -128,6 +129,7 @@ export default function RegisterForm({
             {showPassword ? <EyeSlashIcon className="w-5 h-5" /> : <EyeIcon className="w-5 h-5" />}
           </button>
         </FieldShell>
+        <PasswordStrength value={clave} />
       </Field>
 
       <button type="submit" className="btn-primary w-full mt-2">

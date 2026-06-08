@@ -108,6 +108,13 @@ export default function CourtsList({
                       <span className="chip chip-strong">Seleccionada</span>
                     ) : null}
                   </div>
+                  {!noDisponible && court.dayPriceNotes && court.dayPriceNotes.length > 0 && (
+                    <ul className="mt-2 space-y-0.5">
+                      {court.dayPriceNotes.map((n, i) => (
+                        <li key={i} className="text-[11px] text-muted leading-snug">⏱ {n}</li>
+                      ))}
+                    </ul>
+                  )}
                 </div>
               </button>
 

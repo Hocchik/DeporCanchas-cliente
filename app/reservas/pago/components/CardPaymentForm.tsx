@@ -83,7 +83,13 @@ export default function CardPaymentForm({ onSubmit, disabled }: Props) {
     const numLimpio = v.numero.replace(/\s/g, "");
     if (!/^\d{16}$/.test(numLimpio)) e.numero = "Número debe tener 16 dígitos";
     else if (!luhnValido(numLimpio)) e.numero = "Número de tarjeta inválido";
-    if (!/^(0[1-9]|1[0-2])\/\d{2}$/.test(v.expiracion)) e.expiracion = "Formato MM/AA";
+    if (!/^(0[1-9]|1[0-2])\/\d{2}$/.test(v.expiracion)) {
+      e.expiracion = "Formato MM/AA";
+    } else {
+      const [mm, yy] = v.expiracion.split("/").map(Number);
+      const finMes = new Date(2000 + yy, mm, 0, 23, 59, 59).getTime();
+      if (finMes < Date.now()) e.expiracion = "La tarjeta está vencida";
+    }
     if (!/^\d{3}$/.test(v.cvv)) e.cvv = "CVV de 3 dígitos";
     setErrors(e);
     return Object.keys(e).length === 0;

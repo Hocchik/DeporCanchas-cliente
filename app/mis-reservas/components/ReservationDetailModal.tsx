@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ArrowDownTrayIcon, CalendarDaysIcon, ClockIcon, ExclamationTriangleIcon, MapPinIcon, XMarkIcon } from "@heroicons/react/24/solid";
+import { useRouter } from "next/navigation";
+import { ArrowDownTrayIcon, CalendarDaysIcon, ClockIcon, ExclamationTriangleIcon, MapPinIcon, ArrowPathIcon, XMarkIcon } from "@heroicons/react/24/solid";
 import type { Reserva } from "./ReservationCard";
 
 type RefundPreview = {
@@ -21,6 +22,7 @@ type Props = {
 };
 
 export default function ReservationDetailModal({ reserva, onClose, onCancelled }: Props) {
+  const router = useRouter();
   const [step, setStep] = useState<"detalle" | "confirmar">("detalle");
   const [preview, setPreview] = useState<RefundPreview | null>(null);
   const [loadingPreview, setLoadingPreview] = useState(false);
@@ -93,6 +95,13 @@ export default function ReservationDetailModal({ reserva, onClose, onCancelled }
             puedeCancelar={puedeCancelar}
             onClose={onClose}
             onCancelClick={startCancelFlow}
+            onReanudar={() => {
+              // Pre-rellena cancha + fecha en /reservas para volver a intentarlo.
+              const ymd = reserva.fecha_empieza.slice(0, 10);
+              router.push(
+                `/reservas?campus=${campus.id}&cancha=${cancha.id}&fecha=${ymd}`
+              );
+            }}
           />
         ) : (
           <ConfirmCancelView
@@ -114,7 +123,7 @@ export default function ReservationDetailModal({ reserva, onClose, onCancelled }
 }
 
 function DetailView({
-  reserva, start, end, voucherUrl, puedeCancelar, onClose, onCancelClick,
+  reserva, start, end, voucherUrl, puedeCancelar, onClose, onCancelClick, onReanudar,
 }: {
   reserva: Reserva;
   start: Date; end: Date;
@@ -122,7 +131,9 @@ function DetailView({
   puedeCancelar: boolean;
   onClose: () => void;
   onCancelClick: () => void;
+  onReanudar: () => void;
 }) {
+  const esNoCompletada = reserva.estado === "expirada";
   const cancha = reserva.canchas_deportivas;
   const campus = cancha.campus;
   return (
@@ -179,6 +190,22 @@ function DetailView({
             className="w-full rounded-xl border border-danger-soft bg-danger-soft py-3 text-danger font-semibold hover:opacity-90 transition"
           >
             Cancelar reserva
+          </button>
+        </div>
+      )}
+
+      {esNoCompletada && (
+        <div className="mt-5 border-t border-soft pt-4 space-y-2">
+          <p className="text-xs text-muted">
+            Tu pago no se completó dentro de los 10 minutos. El horario quedó libre y puede haberse ocupado.
+          </p>
+          <button
+            type="button"
+            onClick={onReanudar}
+            className="btn-primary w-full !py-3"
+          >
+            <ArrowPathIcon className="w-4 h-4" />
+            Reservar este horario de nuevo
           </button>
         </div>
       )}

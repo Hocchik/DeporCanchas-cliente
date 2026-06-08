@@ -24,7 +24,7 @@ export default function RegisterPage() {
               <Bullet icon={<BoltIcon className="w-4 h-4" />} text="Reserva inmediata, sin llamadas" />
               <Bullet icon={<ShieldCheckIcon className="w-4 h-4" />} text="Pago seguro con tarjeta o Yape/Plin" />
               <Bullet icon={<CheckCircleIcon className="w-4 h-4" />} text="Cancela hasta 24h antes" />
-              <Bullet icon={<TrophyIcon className="w-4 h-4" />} text="Historial completo de tus partidos" />
+              <Bullet icon={<TrophyIcon className="w-4 h-4" />} text="Historial completo de tus reservas" />
             </ul>
           </div>
         </aside>

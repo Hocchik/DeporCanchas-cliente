@@ -35,7 +35,17 @@ export const pagoTarjetaSchema = z.object({
     .string()
     .transform((s) => s.replace(/\s+/g, ""))
     .pipe(z.string().regex(/^\d{16}$/).refine(luhnValido, "Número de tarjeta inválido")),
-  expiracion: z.string().regex(/^(0[1-9]|1[0-2])\/\d{2}$/),
+  expiracion: z
+    .string()
+    .regex(/^(0[1-9]|1[0-2])\/\d{2}$/, "Formato MM/AA")
+    .refine((s) => {
+      // No expirada: el fin del mes indicado debe ser >= hoy.
+      const [mm, yy] = s.split("/").map(Number);
+      const year = 2000 + yy;
+      // último día del mes (día 0 del siguiente mes)
+      const finMes = new Date(year, mm, 0, 23, 59, 59).getTime();
+      return finMes >= Date.now();
+    }, "La tarjeta está vencida"),
   cvv: z.string().regex(/^\d{3}$/),
 });
 

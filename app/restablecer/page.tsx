@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
+import PasswordStrength from "../components/PasswordStrength";
 import { LockClosedIcon, EyeIcon, EyeSlashIcon, ArrowRightIcon } from "@heroicons/react/24/solid";
 
 function RestablecerInner() {
@@ -110,6 +111,7 @@ function RestablecerInner() {
                       {showPass ? <EyeSlashIcon className="w-5 h-5" /> : <EyeIcon className="w-5 h-5" />}
                     </button>
                   </div>
+                  <PasswordStrength value={password} />
                   <p className="text-soft text-xs mt-1.5 ml-1">
                     Mínimo 8 caracteres, 1 mayúscula, 1 minúscula y 1 número.
                   </p>

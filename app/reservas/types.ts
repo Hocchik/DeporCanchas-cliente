@@ -24,6 +24,8 @@ export type Court = {
   sportLabel?: string;
   /** Precio default de la cancha (fallback cuando ninguna regla aplica) */
   precioDefault?: number | null;
+  /** Notas de tramos especiales del día (ej. "De 18:00 a 22:00 cuesta S/150/h") */
+  dayPriceNotes?: string[];
   tariffs?: {
     precio: number;
     prioridad: number;

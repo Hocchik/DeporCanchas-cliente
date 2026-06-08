@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { ArrowRightOnRectangleIcon, CheckCircleIcon, ChevronDownIcon, IdentificationIcon } from "@heroicons/react/24/solid";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
+import PasswordStrength from "../components/PasswordStrength";
 import { useSession } from "../contexts/SessionContext";
 
 export default function PerfilPage() {
@@ -152,6 +153,7 @@ export default function PerfilPage() {
               </Field>
               <Field label="Clave nueva" hint="Mínimo 8 caracteres.">
                 <Input type="password" value={pwd.nueva} onChange={(s) => setPwd({ ...pwd, nueva: s })} />
+                <PasswordStrength value={pwd.nueva} />
               </Field>
               <Field label="Confirmar clave nueva">
                 <Input type="password" value={pwd.confirmar} onChange={(s) => setPwd({ ...pwd, confirmar: s })} />
