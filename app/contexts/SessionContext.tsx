@@ -9,6 +9,8 @@ export type SessionUser = {
   dni: string | null;
   celular: string | null;
   roles_id: number;
+  /** Si la columna existe en BD: true=verificó, false=pendiente. */
+  emailVerificado?: boolean;
 };
 
 type SessionContextValue = {

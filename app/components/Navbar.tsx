@@ -1,7 +1,7 @@
 "use client";
 import React, { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { UserCircleIcon, ChevronDownIcon } from '@heroicons/react/24/solid';
+import { UserCircleIcon, ChevronDownIcon, ExclamationTriangleIcon } from '@heroicons/react/24/solid';
 import { useSession } from '../contexts/SessionContext';
 import ThemeToggle from './ThemeToggle';
 
@@ -10,6 +10,30 @@ const Navbar = () => {
   const router = useRouter();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
+  const [resending, setResending] = useState(false);
+  const [resendMsg, setResendMsg] = useState<string | null>(null);
+
+  // Solo mostramos el banner cuando es explícitamente false. Si la columna no
+  // existe (undefined) o es true, no molestamos.
+  const needsVerification = user && user.emailVerificado === false;
+
+  const handleResend = async () => {
+    setResending(true);
+    setResendMsg(null);
+    try {
+      const res = await fetch("/api/auth/verificar-reenviar", { method: "POST" });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.ok) {
+        setResendMsg(data.already ? "Tu correo ya estaba verificado." : "Te enviamos un correo. Revisa tu bandeja.");
+      } else {
+        setResendMsg("No se pudo reenviar. Intenta más tarde.");
+      }
+    } catch {
+      setResendMsg("Error de red.");
+    } finally {
+      setResending(false);
+    }
+  };
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -38,6 +62,29 @@ const Navbar = () => {
 
   return (
     <nav className="sticky top-0 z-40 backdrop-blur-md bg-app-blur border-b border-soft">
+      {needsVerification && (
+        <div className="bg-amber-50 border-b border-amber-200 text-amber-900 text-sm">
+          <div className="max-w-6xl mx-auto px-4 md:px-6 py-2 flex flex-wrap items-center gap-3 justify-between">
+            <p className="flex items-center gap-2">
+              <ExclamationTriangleIcon className="w-4 h-4 text-amber-700 shrink-0" />
+              <span>
+                Verifica tu correo (<span className="font-semibold">{user?.email}</span>) para poder pagar reservas.
+              </span>
+            </p>
+            <div className="flex items-center gap-3">
+              {resendMsg && <span className="text-xs">{resendMsg}</span>}
+              <button
+                type="button"
+                onClick={handleResend}
+                disabled={resending}
+                className="text-xs font-semibold underline text-amber-900 hover:text-amber-700 disabled:opacity-50"
+              >
+                {resending ? "Enviando…" : "Reenviar correo"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <div className="max-w-6xl mx-auto px-4 md:px-6 h-16 flex items-center justify-between gap-4">
         <a
           href="/"

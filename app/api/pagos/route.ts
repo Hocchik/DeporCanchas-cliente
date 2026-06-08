@@ -44,6 +44,17 @@ export async function POST(req: NextRequest) {
     throw e;
   }
 
+  // Gate de verificación de email: no se permite pagar hasta confirmar el correo.
+  if (!user.emailVerificado) {
+    return Response.json(
+      {
+        error: "email_no_verificado",
+        detail: "Verifica tu correo antes de completar el pago. Revisa tu bandeja o reenvía el correo desde el aviso superior.",
+      },
+      { status: 403 }
+    );
+  }
+
   const supabase = createServiceClient();
   const contentType = req.headers.get("content-type") ?? "";
 
