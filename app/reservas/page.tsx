@@ -46,22 +46,41 @@ const isDateInRange = (dateKey: string, start: string | null, end: string | null
   return true;
 };
 
+const hourInRange = (minutes: number, start: string | null, end: string | null) => {
+  if (!start || !end) return true;
+  const [sh, sm] = start.split(":").map(Number);
+  const [eh, em] = end.split(":").map(Number);
+  const s = sh * 60 + sm;
+  const e = eh * 60 + em;
+  return minutes >= s && minutes < e;
+};
+
+const timeToMinutes = (t: string) => {
+  const [h, m] = t.split(":").map(Number);
+  return h * 60 + m;
+};
+
 /**
- * Espejo simplificado de `lib/reservas/calcularPrecio` para mostrar el precio
- * "desde" en la card de la cancha. Toma TODAS las reglas enlazadas a la cancha,
- * filtra por día Lima + rango de fechas (ignora la hora, porque "desde" es
- * agregado del día), ordena por prioridad ASC y usa la primera. Si ninguna
- * regla aplica, cae a `precioDefault` de la cancha; como último recurso usa la
- * tarifa base legacy por deporte (canchas viejas sin default).
+ * Resuelve el precio efectivo de UN slot concreto, idéntico a
+ * `lib/reservas/calcularPrecio` (servidor) — pero pure-client.
+ * Filtra reglas por día Lima + fecha + hora; toma la de menor `prioridad`.
+ * Si nada aplica, usa `precioDefault`; último recurso, baseTariffs por deporte.
  */
-const resolveCourtPrice = (court: Court, date: Date, baseTariffs: BaseTariffs) => {
+const priceForSlot = (
+  court: Court,
+  date: Date,
+  slotTime: string,
+  baseTariffs: BaseTariffs
+): number => {
   const ymd = limaYMD(date);
-  const dow = dowYMD(ymd); // 0=Dom..6=Sáb (hora Lima)
+  const dow = dowYMD(ymd);
+  const slotMin = timeToMinutes(slotTime);
   const sportKey = court.sportKey ?? "futbol7";
 
   const aplicables = (court.tariffs ?? [])
     .filter((t) => !t.dias || t.dias.length === 0 || t.dias.includes(dow))
-    .filter((t) => isDateInRange(ymd, t.fecha_empieza, t.fecha_termina));
+    .filter((t) => isDateInRange(ymd, t.fecha_empieza, t.fecha_termina))
+    .filter((t) => hourInRange(slotMin, t.hora_empieza, t.hora_termina));
 
   if (aplicables.length) {
     aplicables.sort((a, b) => (a.prioridad ?? 0) - (b.prioridad ?? 0));
@@ -71,10 +90,71 @@ const resolveCourtPrice = (court: Court, date: Date, baseTariffs: BaseTariffs) =
   return baseTariffs[sportKey] ?? 0;
 };
 
+/**
+ * "Desde S/X" mostrado en la card: el **mínimo** que el cliente podría pagar
+ * en ese día evaluando cada slot operativo (08:00–21:00). Así el "desde" no
+ * exagera con una regla horaria especial — refleja el precio real más bajo.
+ */
+const resolveCourtPrice = (court: Court, date: Date, baseTariffs: BaseTariffs): number => {
+  let min = Infinity;
+  for (const t of SLOT_TIMES) {
+    const p = priceForSlot(court, date, t, baseTariffs);
+    if (p < min) min = p;
+  }
+  return Number.isFinite(min) ? min : 0;
+};
+
+/**
+ * Construye etiquetas legibles de "tramos especiales" del día: reglas con
+ * franja horaria distinta al "desde". Ej.: "Después de las 18:00 cuesta S/150".
+ */
+const buildDayPriceNotes = (
+  court: Court,
+  date: Date,
+  desde: number
+): string[] => {
+  const ymd = limaYMD(date);
+  const dow = dowYMD(ymd);
+  const reglas = (court.tariffs ?? [])
+    .filter((t) => !t.dias || t.dias.length === 0 || t.dias.includes(dow))
+    .filter((t) => isDateInRange(ymd, t.fecha_empieza, t.fecha_termina))
+    .filter((t) => t.hora_empieza && t.hora_termina) // solo tramos horarios
+    .filter((t) => Math.abs((t.precio ?? 0) - desde) > 0.01);
+
+  // Dedup por (hora_empieza, hora_termina, precio)
+  const seen = new Set<string>();
+  const notes: string[] = [];
+  for (const t of reglas) {
+    const key = `${t.hora_empieza}-${t.hora_termina}-${t.precio}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    const h1 = (t.hora_empieza ?? "").slice(0, 5);
+    const h2 = (t.hora_termina ?? "").slice(0, 5);
+    notes.push(`De ${h1} a ${h2} cuesta S/${(t.precio ?? 0).toFixed(2)}/h`);
+  }
+  return notes;
+};
+
 export default function Reservas() {
   const router = useRouter();
   const { user } = useSession();
   const isAuthed = Boolean(user);
+
+  // Pre-selección desde query string (ej. cuando vienen de "Reservar de nuevo" en Mis Reservas).
+  // Lo leemos de window al montar para no requerir <Suspense> sobre useSearchParams.
+  const [prefill, setPrefill] = useState<{ campus: string; cancha: string; fecha: string }>({ campus: "", cancha: "", fecha: "" });
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const sp = new URLSearchParams(window.location.search);
+    setPrefill({
+      campus: sp.get("campus") ?? "",
+      cancha: sp.get("cancha") ?? "",
+      fecha: sp.get("fecha") ?? "",
+    });
+  }, []);
+  const prefillCampusId = prefill.campus;
+  const prefillCourtId = prefill.cancha;
+  const prefillFecha = prefill.fecha;
 
   // visibleCount se mide dinámicamente desde FilterBar según el ancho real
   // del carrusel de fechas; mientras llega el primer reporte usamos 2.
@@ -113,8 +193,32 @@ export default function Reservas() {
   const selectedCampus = campuses.find((c) => c.id === selectedCampusId);
 
   useEffect(() => {
-    if (campuses.length && !selectedCampusId) setSelectedCampusId(campuses[0].id);
-  }, [campuses, selectedCampusId]);
+    if (!campuses.length || selectedCampusId) return;
+    // Pre-seleccionar desde query string si el campus existe; si no, el primero.
+    if (prefillCampusId && campuses.some((c) => c.id === prefillCampusId)) {
+      setSelectedCampusId(prefillCampusId);
+    } else {
+      setSelectedCampusId(campuses[0].id);
+    }
+  }, [campuses, selectedCampusId, prefillCampusId]);
+
+  // Pre-seleccionar cancha desde query string una vez el campus está listo.
+  useEffect(() => {
+    if (!prefillCourtId || !selectedCampusId) return;
+    const campus = campuses.find((c) => c.id === selectedCampusId);
+    if (campus?.courts.some((c) => c.id === prefillCourtId)) {
+      setSelectedCourtId(prefillCourtId);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedCampusId, campuses.length]);
+
+  // Pre-seleccionar fecha desde query string (YYYY-MM-DD); si está en el rango.
+  useEffect(() => {
+    if (!prefillFecha) return;
+    const idx = allDates.findIndex((d) => limaYMD(d) === prefillFecha);
+    if (idx >= 0) setSelectedDateIndex(idx);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allDates.length]);
 
   // Opciones de deporte derivadas del campus activo: "Todos" + "Fútbol" (agrupa
   // F7+F11 si hay) + cada otro tipo único como standalone (Tenis, Pádel, y
@@ -148,7 +252,14 @@ export default function Reservas() {
   }, [availableSports, selectedSport]);
 
   const pricedCourts = useMemo(
-    () => filteredCourts.map((c) => ({ ...c, pricePerHour: resolveCourtPrice(c, selectedDate, baseTariffs) })),
+    () => filteredCourts.map((c) => {
+      const desde = resolveCourtPrice(c, selectedDate, baseTariffs);
+      return {
+        ...c,
+        pricePerHour: desde,
+        dayPriceNotes: buildDayPriceNotes(c, selectedDate, desde),
+      };
+    }),
     [filteredCourts, selectedDate, baseTariffs]
   );
 
@@ -220,7 +331,15 @@ export default function Reservas() {
     });
   };
 
-  const totalPrice = selectedCourt ? selectedSlots.length * selectedCourt.pricePerHour : 0;
+  // Total real por slot: respeta las reglas con horario (ej. domingos 18-22 más
+  // caro). Espeja exactamente el cálculo del server (calcularPrecioReserva).
+  const totalPrice = useMemo(() => {
+    if (!selectedCourt) return 0;
+    return selectedSlots.reduce(
+      (sum, t) => sum + priceForSlot(selectedCourt, selectedDate, t, baseTariffs),
+      0
+    );
+  }, [selectedCourt, selectedSlots, selectedDate, baseTariffs]);
 
   const handleConfirmReservation = async (payload: {
     campusName?: string;

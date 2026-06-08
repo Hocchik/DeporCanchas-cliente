@@ -39,8 +39,17 @@ const Navbar = () => {
   return (
     <nav className="sticky top-0 z-40 backdrop-blur-md bg-app-blur border-b border-soft">
       <div className="max-w-6xl mx-auto px-4 md:px-6 h-16 flex items-center justify-between gap-4">
-        <a href="/" className="font-display font-extrabold text-xl text-brand tracking-tight">
-          DeporCanchas
+        <a
+          href="/"
+          className="group inline-flex items-center gap-2 font-display tracking-tight"
+          aria-label="DeporCanchas — Ir al inicio"
+        >
+          <span className="inline-flex items-center justify-center w-9 h-9 rounded-xl bg-brand text-on-brand font-black text-base shadow-soft group-hover:scale-[1.04] transition">
+            DC
+          </span>
+          <span className="text-2xl md:text-[26px] font-black text-brand leading-none">
+            Depor<span className="text-primary">Canchas</span>
+          </span>
         </a>
 
         <div className="hidden md:flex items-center gap-1">

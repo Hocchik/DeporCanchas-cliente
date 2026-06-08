@@ -11,7 +11,14 @@ export default function Footer() {
       <div className="relative max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-10 mb-10">
         {/* Marca */}
         <div>
-          <h3 className="font-display font-extrabold text-xl mb-3">DeporCanchas</h3>
+          <h3 className="font-display flex items-center gap-2 mb-3">
+            <span className="inline-flex items-center justify-center w-9 h-9 rounded-xl bg-brand text-on-brand font-black text-base shadow-soft">
+              DC
+            </span>
+            <span className="text-2xl font-black text-snow-white tracking-tight leading-none">
+              Depor<span className="text-brand">Canchas</span>
+            </span>
+          </h3>
           <p className="text-snow-white/70 text-sm leading-relaxed mb-5">
             Elevando la experiencia deportiva urbana a través de sedes premium y tecnología de vanguardia.
           </p>
