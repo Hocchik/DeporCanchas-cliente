@@ -189,6 +189,12 @@ function PagoPage() {
     if (!res.ok) {
       setModal({ kind: "hidden" });
       const j = await res.json().catch(() => ({}));
+      if (j.error === "email_no_verificado") {
+        alert(
+          `${j.detail || "Verifica tu correo antes de completar el pago."}\n\nSubí al banner amarillo en la parte superior y haz clic en "Reenviar correo" si no te llegó.`
+        );
+        return;
+      }
       alert(`Error al procesar el pago: ${j.error ?? "desconocido"}`);
       return;
     }
