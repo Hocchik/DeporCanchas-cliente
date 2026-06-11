@@ -20,6 +20,7 @@ type CourtRow = {
 };
 
 type SedeCard = {
+  id: number;
   nombre: string;
   descripcion: string;
   deportes: string[];
@@ -69,6 +70,7 @@ export default function SedesGrid() {
             else deportesSet.add("Fútbol");
           });
           return {
+            id: campus.id,
             nombre: campus.nombre,
             descripcion: campus.ubicacion || "",
             deportes: Array.from(deportesSet),
@@ -155,7 +157,7 @@ export default function SedesGrid() {
                     ))}
                   </div>
                   <a
-                    href="/reservas"
+                    href={`/reservas?campus=${sede.id}`}
                     className="btn-secondary w-full justify-center group-hover:bg-grass-green group-hover:text-forest-green group-hover:border-strong"
                   >
                     Reservar aquí
