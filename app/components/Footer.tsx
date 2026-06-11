@@ -23,12 +23,20 @@ export default function Footer() {
             Elevando la experiencia deportiva urbana a través de sedes premium y tecnología de vanguardia.
           </p>
           <div className="flex gap-2">
-            <span className="border border-snow-white/30 rounded-xl p-2.5 flex items-center justify-center hover:bg-snow-white/10 transition">
+            <a
+              href="/reservas"
+              aria-label="Ver canchas disponibles"
+              className="border border-snow-white/30 rounded-xl p-2.5 flex items-center justify-center hover:bg-snow-white/10 transition"
+            >
               <TrophyIcon className="w-4 h-4 text-snow-white" />
-            </span>
-            <span className="border border-snow-white/30 rounded-xl p-2.5 flex items-center justify-center hover:bg-snow-white/10 transition">
+            </a>
+            <a
+              href="mailto:contacto@deporcanchas.com?subject=DeporCanchas"
+              aria-label="Compartir / contactar"
+              className="border border-snow-white/30 rounded-xl p-2.5 flex items-center justify-center hover:bg-snow-white/10 transition"
+            >
               <ShareIcon className="w-4 h-4 text-snow-white" />
-            </span>
+            </a>
           </div>
         </div>
         <div>
@@ -41,17 +49,25 @@ export default function Footer() {
         <div>
           <h4 className="font-display font-semibold mb-3 text-sm uppercase tracking-wider text-snow-white/90">Soporte</h4>
           <ul className="space-y-2 text-sm text-snow-white/75">
-            <li className="flex items-center gap-2"><GlobeAltIcon className="w-4 h-4 text-snow-white/50" /><a href="#" className="hover:text-snow-white transition">Privacidad</a></li>
-            <li className="flex items-center gap-2"><GlobeAltIcon className="w-4 h-4 text-snow-white/50" /><a href="#" className="hover:text-snow-white transition">Términos</a></li>
-            <li className="flex items-center gap-2"><GlobeAltIcon className="w-4 h-4 text-snow-white/50" /><a href="#" className="hover:text-snow-white transition">Centro de Ayuda</a></li>
-            <li className="flex items-center gap-2"><GlobeAltIcon className="w-4 h-4 text-snow-white/50" /><a href="#" className="hover:text-snow-white transition">FAQ</a></li>
+            <li className="flex items-center gap-2"><GlobeAltIcon className="w-4 h-4 text-snow-white/50" /><a href="/nosotros" className="hover:text-snow-white transition">Nosotros</a></li>
+            <li className="flex items-center gap-2"><GlobeAltIcon className="w-4 h-4 text-snow-white/50" /><a href="/nosotros#contacto" className="hover:text-snow-white transition">Centro de Ayuda</a></li>
+            <li className="flex items-center gap-2"><GlobeAltIcon className="w-4 h-4 text-snow-white/50" /><a href="mailto:contacto@deporcanchas.com?subject=Consulta" className="hover:text-snow-white transition">Contáctanos</a></li>
+            <li className="flex items-center gap-2"><GlobeAltIcon className="w-4 h-4 text-snow-white/50" /><a href="/reservas" className="hover:text-snow-white transition">Reservar</a></li>
           </ul>
         </div>
         <div>
           <h4 className="font-display font-semibold mb-3 text-sm uppercase tracking-wider text-snow-white/90">Contacto</h4>
           <ul className="space-y-2.5 text-sm text-snow-white/75">
-            <li className="flex items-center gap-2"><EnvelopeIcon className="w-4 h-4 text-snow-white/50" /> contacto@deporcanchas.com</li>
-            <li className="flex items-center gap-2"><PhoneIcon className="w-4 h-4 text-snow-white/50" /> +51 900 123 456</li>
+            <li>
+              <a href="mailto:contacto@deporcanchas.com" className="flex items-center gap-2 hover:text-snow-white transition">
+                <EnvelopeIcon className="w-4 h-4 text-snow-white/50" /> contacto@deporcanchas.com
+              </a>
+            </li>
+            <li>
+              <a href="tel:+51900123456" className="flex items-center gap-2 hover:text-snow-white transition">
+                <PhoneIcon className="w-4 h-4 text-snow-white/50" /> +51 900 123 456
+              </a>
+            </li>
             <li className="flex items-center gap-2"><MapPinIcon className="w-4 h-4 text-snow-white/50" /> Lima, Perú</li>
           </ul>
         </div>

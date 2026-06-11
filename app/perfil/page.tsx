@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowRightOnRectangleIcon, CheckCircleIcon, ChevronDownIcon, IdentificationIcon } from "@heroicons/react/24/solid";
+import { ArrowRightOnRectangleIcon, CheckCircleIcon, ChevronDownIcon, EyeIcon, EyeSlashIcon, IdentificationIcon } from "@heroicons/react/24/solid";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import PasswordStrength from "../components/PasswordStrength";
@@ -53,8 +53,9 @@ export default function PerfilPage() {
 
   async function savePwd() {
     setPwdMsg(null);
-    if (pwd.nueva !== pwd.confirmar) { setPwdMsg({ kind: "error", text: "Las claves no coinciden" }); return; }
-    if (pwd.nueva.length < 8) { setPwdMsg({ kind: "error", text: "Mínimo 8 caracteres" }); return; }
+    if (!pwd.actual) { setPwdMsg({ kind: "error", text: "Ingresa tu clave actual" }); return; }
+    if (pwd.nueva.length < 8) { setPwdMsg({ kind: "error", text: "La clave nueva debe tener mínimo 8 caracteres" }); return; }
+    if (pwd.nueva !== pwd.confirmar) { setPwdMsg({ kind: "error", text: "La nueva clave y la confirmación no coinciden" }); return; }
     setSavingPwd(true);
     const res = await fetch("/api/perfil/clave", {
       method: "PATCH",
@@ -63,12 +64,18 @@ export default function PerfilPage() {
     });
     setSavingPwd(false);
     if (res.ok) {
-      setPwdMsg({ kind: "ok", text: "Clave actualizada" });
+      setPwdMsg({ kind: "ok", text: "Clave actualizada correctamente" });
       setPwd({ actual: "", nueva: "", confirmar: "" });
-      setShowPwd(false);
+      // Dejamos el panel abierto para que se vea el mensaje de éxito.
     } else {
       const j = await res.json().catch(() => ({}));
-      setPwdMsg({ kind: "error", text: j.error === "clave_actual_invalida" ? "Clave actual incorrecta" : "Error al actualizar" });
+      const msg =
+        j.error === "clave_actual_invalida"
+          ? "La clave actual es incorrecta"
+          : j.error === "validation"
+            ? "Datos inválidos. Revisa los campos."
+            : "Error al actualizar la clave";
+      setPwdMsg({ kind: "error", text: msg });
     }
   }
 
@@ -149,14 +156,14 @@ export default function PerfilPage() {
           {showPwd && (
             <div className="space-y-4">
               <Field label="Clave actual">
-                <Input type="password" value={pwd.actual} onChange={(s) => setPwd({ ...pwd, actual: s })} />
+                <PasswordInput value={pwd.actual} onChange={(s) => setPwd({ ...pwd, actual: s })} autoComplete="current-password" />
               </Field>
               <Field label="Clave nueva" hint="Mínimo 8 caracteres.">
-                <Input type="password" value={pwd.nueva} onChange={(s) => setPwd({ ...pwd, nueva: s })} />
+                <PasswordInput value={pwd.nueva} onChange={(s) => setPwd({ ...pwd, nueva: s })} autoComplete="new-password" />
                 <PasswordStrength value={pwd.nueva} />
               </Field>
               <Field label="Confirmar clave nueva">
-                <Input type="password" value={pwd.confirmar} onChange={(s) => setPwd({ ...pwd, confirmar: s })} />
+                <PasswordInput value={pwd.confirmar} onChange={(s) => setPwd({ ...pwd, confirmar: s })} autoComplete="new-password" />
               </Field>
               {pwdMsg && (
                 <p className={`text-sm ${pwdMsg.kind === "ok" ? "text-brand" : "text-danger"}`}>
@@ -227,5 +234,28 @@ function Input({ value, onChange, ...rest }: InputProps) {
       onChange={(e) => onChange(e.target.value)}
       className="w-full rounded-xl border border-default bg-surface-alt focus:bg-surface focus:border-strong outline-none px-4 py-3 text-primary placeholder:text-soft transition"
     />
+  );
+}
+
+function PasswordInput({ value, onChange, autoComplete }: { value: string; onChange: (s: string) => void; autoComplete?: string }) {
+  const [show, setShow] = useState(false);
+  return (
+    <div className="relative">
+      <input
+        type={show ? "text" : "password"}
+        value={value}
+        autoComplete={autoComplete}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full rounded-xl border border-default bg-surface-alt focus:bg-surface focus:border-strong outline-none pl-4 pr-12 py-3 text-primary placeholder:text-soft transition"
+      />
+      <button
+        type="button"
+        onClick={() => setShow((v) => !v)}
+        aria-label={show ? "Ocultar clave" : "Mostrar clave"}
+        className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-lg text-muted hover:text-brand hover:bg-surface transition"
+      >
+        {show ? <EyeSlashIcon className="w-4 h-4" /> : <EyeIcon className="w-4 h-4" />}
+      </button>
+    </div>
   );
 }
