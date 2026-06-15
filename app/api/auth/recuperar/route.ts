@@ -60,11 +60,15 @@ export async function POST(req: NextRequest) {
   }
 
   const supabase = createServiceClient();
-  const { data: user } = await supabase
+  const { data: user, error: userErr } = await supabase
     .from("usuarios")
     .select("id, nombre, email, esta_activo")
     .eq("email", email)
     .maybeSingle();
+
+  if (userErr) {
+    console.error(`[recuperar] usuarios select falló para ${email}:`, userErr.message);
+  }
 
   // Actualizar contadores aunque el usuario no exista (consistencia anti-enumeración).
   senders.set(email, {
@@ -73,17 +77,24 @@ export async function POST(req: NextRequest) {
     windowStart: st?.windowStart ?? now,
   });
 
-  if (!user || !user.esta_activo) {
-    // Simulamos éxito.
+  if (!user) {
+    console.warn(`[recuperar] no hay usuario con email=${email} — respondiendo ok silencioso`);
+    return Response.json({ ok: true, cooldown_seconds: RESEND_COOLDOWN_MS / 1000 });
+  }
+  if (!user.esta_activo) {
+    console.warn(`[recuperar] usuario ${email} está inactivo (esta_activo=false) — no enviamos código`);
     return Response.json({ ok: true, cooldown_seconds: RESEND_COOLDOWN_MS / 1000 });
   }
 
   // Invalidar códigos previos no usados del mismo usuario
-  await supabase
+  const { error: invErr } = await supabase
     .from("recuperacion_clave")
     .update({ usado_en: new Date().toISOString() })
     .eq("usuarios_id", user.id)
     .is("usado_en", null);
+  if (invErr) {
+    console.error(`[recuperar] no se pudieron invalidar códigos previos:`, invErr.message);
+  }
 
   // Generar nuevo código y guardarlo
   const code = genCode6();
@@ -92,9 +103,14 @@ export async function POST(req: NextRequest) {
     .from("recuperacion_clave")
     .insert({ usuarios_id: user.id, token: code, expira_en });
   if (insErr) {
-    console.error("recuperar insert failed", insErr.message);
+    console.error(
+      `[recuperar] insert en recuperacion_clave falló (¿tabla creada? ¿columnas usuarios_id/token/expira_en/usado_en?):`,
+      insErr.message,
+    );
     return Response.json({ ok: true });
   }
+
+  console.log(`[recuperar] código generado para ${email}; enviando SMTP…`);
 
   // Enviar email — no bloquea la respuesta si el SMTP falla.
   try {
@@ -104,8 +120,12 @@ export async function POST(req: NextRequest) {
       codigo: code,
       expiraMin: CODE_TTL_MIN,
     });
+    console.log(`[recuperar] email enviado a ${email}`);
   } catch (e) {
-    console.error("recuperar email failed", e instanceof Error ? e.message : e);
+    console.error(
+      `[recuperar] sendRecuperacion falló para ${email}:`,
+      e instanceof Error ? e.message : e,
+    );
   }
 
   return Response.json({ ok: true, cooldown_seconds: RESEND_COOLDOWN_MS / 1000 });
