@@ -11,14 +11,14 @@ export default function Footer() {
       <div className="relative max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-10 mb-10">
         {/* Marca */}
         <div>
-          <h3 className="font-display flex items-center gap-2 mb-3">
+          <p className="font-display flex items-center gap-2 mb-3">
             <span className="inline-flex items-center justify-center w-9 h-9 rounded-xl bg-brand text-on-brand font-black text-base shadow-soft">
               DC
             </span>
             <span className="text-2xl font-black text-snow-white tracking-tight leading-none">
               Depor<span className="text-brand">Canchas</span>
             </span>
-          </h3>
+          </p>
           <p className="text-snow-white/70 text-sm leading-relaxed mb-5">
             Elevando la experiencia deportiva urbana a través de sedes premium y tecnología de vanguardia.
           </p>
@@ -40,14 +40,14 @@ export default function Footer() {
           </div>
         </div>
         <div>
-          <h4 className="font-display font-semibold mb-3 text-sm uppercase tracking-wider text-snow-white/90">Navegación</h4>
+          <h2 className="font-display font-semibold mb-3 text-sm uppercase tracking-wider text-snow-white/90">Navegación</h2>
           <ul className="space-y-2 text-sm text-snow-white/75">
             <li><a href="/reservas" className="hover:text-snow-white transition">Reserva tu cancha</a></li>
             <li><a href="/nosotros" className="hover:text-snow-white transition">Nosotros</a></li>
           </ul>
         </div>
         <div>
-          <h4 className="font-display font-semibold mb-3 text-sm uppercase tracking-wider text-snow-white/90">Soporte</h4>
+          <h2 className="font-display font-semibold mb-3 text-sm uppercase tracking-wider text-snow-white/90">Soporte</h2>
           <ul className="space-y-2 text-sm text-snow-white/75">
             <li className="flex items-center gap-2"><GlobeAltIcon className="w-4 h-4 text-snow-white/50" /><a href="/nosotros" className="hover:text-snow-white transition">Nosotros</a></li>
             <li className="flex items-center gap-2"><GlobeAltIcon className="w-4 h-4 text-snow-white/50" /><a href="/nosotros#contacto" className="hover:text-snow-white transition">Centro de Ayuda</a></li>
@@ -56,7 +56,7 @@ export default function Footer() {
           </ul>
         </div>
         <div>
-          <h4 className="font-display font-semibold mb-3 text-sm uppercase tracking-wider text-snow-white/90">Contacto</h4>
+          <h2 className="font-display font-semibold mb-3 text-sm uppercase tracking-wider text-snow-white/90">Contacto</h2>
           <ul className="space-y-2.5 text-sm text-snow-white/75">
             <li>
               <a href="mailto:contacto@deporcanchas.com" className="flex items-center gap-2 hover:text-snow-white transition">
