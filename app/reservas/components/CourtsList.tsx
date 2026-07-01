@@ -73,6 +73,7 @@ export default function CourtsList({
                     fill
                     sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                     priority={idx === 0}
+                    fetchPriority={idx === 0 ? "high" : "auto"}
                     className={[
                       "object-cover transition-transform duration-500",
                       noDisponible ? "grayscale" : "hover:scale-105",
