@@ -30,6 +30,15 @@ export async function POST(req: NextRequest) {
   }
   const { canchasdep_id, fecha_empieza, fecha_termina } = parsed.data;
 
+  // Guard: no permitir reservar en el pasado. La UI ya bloquea los slots
+  // vencidos pero cliente-side puede ser bypaseado — validamos server-side.
+  if (new Date(fecha_empieza).getTime() <= Date.now()) {
+    return Response.json(
+      { error: "slot_pasado", detail: "No puedes reservar en un horario que ya pasó." },
+      { status: 400 }
+    );
+  }
+
   const supabase = createServiceClient();
 
   // Cleanup lazy de pendientes vencidos

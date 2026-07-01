@@ -1,5 +1,5 @@
 import type { Court, CourtTimeSlot, TimeStatus } from "./types";
-import { limaYMD, dowYMD } from "@/lib/lima-time";
+import { limaYMD, dowYMD, limaMinutesOfDay } from "@/lib/lima-time";
 
 export const SLOT_TIMES = [
   "08:00",
@@ -63,7 +63,20 @@ export const getStatusForCourt = (court: Court, date: Date): CourtTimeSlot[] => 
       : court.availability?.occupiedByWeekday?.[dayKey] ?? []
   );
 
+  // Si estamos viendo hoy (hora Lima), todo slot cuyo inicio ya pasó queda
+  // bloqueado — no se puede reservar en el pasado.
+  const now = new Date();
+  const isToday = dateKey === limaYMD(now);
+  const nowMinutes = isToday ? limaMinutesOfDay(now) : -1;
+
   return SLOT_TIMES.map((time) => {
+    if (isToday) {
+      const [h, m] = time.split(":").map(Number);
+      const slotStart = h * 60 + m;
+      if (slotStart <= nowMinutes) {
+        return { time, status: "blocked" as const };
+      }
+    }
     if (blocked.has(time)) {
       return { time, status: "blocked" as const };
     }
