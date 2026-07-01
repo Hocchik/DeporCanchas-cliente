@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { ArrowDownTrayIcon, ChevronRightIcon } from "@heroicons/react/24/solid";
 
 export type Reserva = {
@@ -68,10 +69,11 @@ export default function ReservationCard({ reserva, onClick }: { reserva: Reserva
         aria-label={`Ver detalle de ${cancha.nombre}`}
         className="text-left flex gap-4 w-full"
       >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
+        <Image
           src={imageForType(cancha.tipo_deporte)}
           alt={cancha.nombre}
+          width={128}
+          height={96}
           className="h-24 w-32 rounded-xl object-cover flex-shrink-0 transition-transform group-hover:scale-[1.02]"
         />
         <div className="flex-1 min-w-0">

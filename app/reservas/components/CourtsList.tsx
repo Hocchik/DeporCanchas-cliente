@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { CheckCircleIcon } from "@heroicons/react/24/solid";
 import type { Campus, Court, CourtTimeSlot } from "../types";
 import { formatTimeRange24, getStatusForCourt } from "../utils";
@@ -36,7 +37,7 @@ export default function CourtsList({
       </div>
 
       <div className="space-y-6">
-        {courts.map((court) => {
+        {courts.map((court, idx) => {
           const isSelected = selectedCourtId === court.id;
           const timeStatus = selectedDate ? getStatusForCourt(court, selectedDate) : [];
           const slotsToRender = isSelected && selectedCourtSlots.length ? selectedCourtSlots : timeStatus;
@@ -66,12 +67,15 @@ export default function CourtsList({
                   </span>
                 )}
                 <div className="relative h-44 w-full overflow-hidden bg-surface-alt">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
+                  <Image
                     src={court.image}
                     alt={court.name}
+                    fill
+                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                    priority={idx === 0}
+                    fetchPriority={idx === 0 ? "high" : "auto"}
                     className={[
-                      "w-full h-full object-cover transition-transform duration-500",
+                      "object-cover transition-transform duration-500",
                       noDisponible ? "grayscale" : "hover:scale-105",
                     ].join(" ")}
                   />

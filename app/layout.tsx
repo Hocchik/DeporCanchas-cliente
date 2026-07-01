@@ -6,17 +6,21 @@ import { Providers } from "./providers";
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
+  display: "optional",
 });
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
+  preload: false,
+  display: "optional",
 });
 
 const sora = Sora({
   variable: "--font-sora",
   subsets: ["latin"],
   weight: ["400", "500", "600", "700", "800"],
+  display: "optional",
 });
 
 export const metadata: Metadata = {
@@ -46,6 +50,9 @@ export default function RootLayout({
     >
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeBootScript }} />
+        {/* Preconnect al CDN de Supabase para acelerar la carga de imágenes de canchas (LCP) */}
+        <link rel="preconnect" href="https://tfvlnhsjmmusnxaxgdqp.supabase.co" crossOrigin="anonymous" />
+        <link rel="dns-prefetch" href="https://tfvlnhsjmmusnxaxgdqp.supabase.co" />
       </head>
       <body className="min-h-full flex flex-col">
         <Providers>

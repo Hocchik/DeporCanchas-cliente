@@ -410,11 +410,49 @@ export default function Reservas() {
         onClose={() => setShowAuthModal(false)}
         onAuthSuccess={() => setShowAuthModal(false)}
       />
-      <div className="flex-1 max-w-7xl mx-auto w-full px-4 md:px-6 py-6 md:py-10">
+      <div className="flex-1 max-w-7xl mx-auto w-full px-4 md:px-6 py-6 md:py-10 min-h-[calc(100vh-4rem)]">
         {isLoading ? (
-          <div className="card-soft p-8 text-center text-muted animate-pulse-soft">
-            Cargando sedes y canchas…
-          </div>
+          <>
+            {/* Mobile sede button placeholder */}
+            <div className="lg:hidden mb-4">
+              <div className="h-10 w-44 rounded-xl bg-surface-alt animate-pulse-soft" />
+            </div>
+            <div className="grid grid-cols-1 gap-6 items-start lg:grid-cols-[240px_minmax(0,1fr)_320px] xl:grid-cols-[260px_minmax(0,1fr)_340px]">
+              {/* Sidebar skeleton */}
+              <div className="hidden lg:block card-soft p-5 space-y-3">
+                <div className="h-5 w-14 rounded-lg bg-surface-alt animate-pulse-soft" />
+                {[0, 1, 2].map((i) => (
+                  <div key={i} className="h-11 rounded-xl bg-surface-alt animate-pulse-soft" />
+                ))}
+              </div>
+              {/* Center skeleton */}
+              <div className="space-y-5">
+                <div className="space-y-2">
+                  <div className="h-4 w-20 rounded bg-surface-alt animate-pulse-soft" />
+                  <div className="h-7 w-52 rounded-lg bg-surface-alt animate-pulse-soft" />
+                </div>
+                {/* FilterBar skeleton — matches actual 2-card grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-5">
+                  <div className="h-24 rounded-2xl bg-surface-alt animate-pulse-soft" />
+                  <div className="h-24 rounded-2xl bg-surface-alt animate-pulse-soft" />
+                </div>
+                {[0, 1].map((i) => (
+                  <div key={i} className="grid grid-cols-1 sm:grid-cols-[1fr_1fr] gap-4">
+                    <div className="rounded-2xl bg-surface-alt animate-pulse-soft h-[296px]" />
+                    <div className="rounded-2xl bg-surface-alt animate-pulse-soft h-[296px]" />
+                  </div>
+                ))}
+              </div>
+              {/* Right panel skeleton */}
+              <div className="card-soft p-5 space-y-4">
+                <div className="h-4 w-16 rounded bg-surface-alt animate-pulse-soft" />
+                <div className="h-6 w-44 rounded-lg bg-surface-alt animate-pulse-soft" />
+                <div className="h-24 rounded-xl bg-surface-alt animate-pulse-soft" />
+                <div className="h-px bg-surface-alt" />
+                <div className="h-11 rounded-xl bg-surface-alt animate-pulse-soft" />
+              </div>
+            </div>
+          </>
         ) : loadError ? (
           <div className="card-soft p-8 text-center text-danger">
             Ocurrió un error al cargar las reservas: {loadError}
