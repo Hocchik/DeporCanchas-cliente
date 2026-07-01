@@ -96,12 +96,23 @@ export async function POST(req: NextRequest) {
     console.error(`[recuperar] no se pudieron invalidar códigos previos:`, invErr.message);
   }
 
-  // Generar nuevo código y guardarlo
-  const code = genCode6();
+  // Generar nuevo código y guardarlo. Reintentamos ante colisión UNIQUE (código
+  // ya vigente para otro usuario) — muy poco probable con 1M combinaciones pero
+  // técnicamente posible; a los 5 intentos aceptamos que algo raro pasa.
   const expira_en = new Date(now + CODE_TTL_MIN * 60 * 1000).toISOString();
-  const { error: insErr } = await supabase
-    .from("recuperacion_clave")
-    .insert({ usuarios_id: user.id, token: code, expira_en });
+  let code = "";
+  let insErr: { code?: string; message?: string } | null = null;
+  for (let intento = 0; intento < 5; intento++) {
+    code = genCode6();
+    const res = await supabase
+      .from("recuperacion_clave")
+      .insert({ usuarios_id: user.id, token: code, expira_en });
+    insErr = res.error as { code?: string; message?: string } | null;
+    if (!insErr) break;
+    // 23505 = unique_violation. Reintentar con otro código.
+    if (insErr.code !== "23505") break;
+    console.warn(`[recuperar] colisión de código en intento ${intento + 1}, reintentando…`);
+  }
   if (insErr) {
     console.error(
       `[recuperar] insert en recuperacion_clave falló (¿tabla creada? ¿columnas usuarios_id/token/expira_en/usado_en?):`,
