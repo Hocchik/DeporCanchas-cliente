@@ -1,39 +1,9 @@
 import "server-only";
 import { createServiceClient } from "../supabase/server";
 import { limaYMD, limaMinutesOfDay, dowYMD } from "@/lib/lima-time";
+import { seleccionarPrecioSlot, type TarifaRow } from "./tarifaSelector";
 
-type TarifaRow = {
-  precio: number;
-  prioridad: number;
-  dias: number[] | null;
-  hora_empieza: string | null;
-  hora_termina: string | null;
-  fecha_empieza: string | null;
-  fecha_termina: string | null;
-};
-
-function dayInRange(dow: number, dias: number[] | null): boolean {
-  if (!dias || dias.length === 0) return true; // sin días = todos los días
-  return dias.includes(dow);
-}
-
-function timeToMinutes(t: string): number {
-  const [h, m] = t.split(":").map(Number);
-  return h * 60 + m;
-}
-
-function dateInRange(ymd: string, start: string | null, end: string | null): boolean {
-  if (start && ymd < start) return false;
-  if (end && ymd > end) return false;
-  return true;
-}
-
-function hourInRange(minutes: number, start: string | null, end: string | null): boolean {
-  if (!start || !end) return true;
-  const s = timeToMinutes(start);
-  const e = timeToMinutes(end);
-  return minutes >= s && minutes < e;
-}
+export type { TarifaRow };
 
 export async function calcularPrecioReserva(
   canchasdep_id: number,
@@ -83,19 +53,7 @@ export async function calcularPrecioReserva(
     const slotMinutes = limaMinutesOfDay(slotDate);
     const slotDow = dowYMD(slotYMD); // 0=Dom..6=Sáb, en hora Lima
 
-    const aplicables = candidates
-      .filter((t) => dayInRange(slotDow, t.dias))
-      .filter((t) => dateInRange(slotYMD, t.fecha_empieza, t.fecha_termina))
-      .filter((t) => hourInRange(slotMinutes, t.hora_empieza, t.hora_termina))
-      .sort((a, b) => a.prioridad - b.prioridad);
-
-    if (aplicables.length) {
-      total += aplicables[0].precio;
-    } else if (precioDefault !== null) {
-      total += precioDefault; // fallback: precio default de la cancha
-    } else {
-      throw new Error("tarifa_no_definida");
-    }
+    total += seleccionarPrecioSlot(candidates, slotDow, slotYMD, slotMinutes, precioDefault);
   }
   return Number(total.toFixed(2));
 }
