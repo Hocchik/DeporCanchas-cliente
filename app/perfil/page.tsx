@@ -109,10 +109,7 @@ export default function PerfilPage() {
             <Field label="Email">
               <Input type="email" value={datos.email} onChange={(s) => setDatos({ ...datos, email: s })} placeholder="tu@email.com" />
             </Field>
-            <Field
-              label="DNI"
-              hint="Se registra automáticamente cuando pagas con tarjeta."
-            >
+            <Field label="DNI">
               <div className="flex items-center gap-3 rounded-xl border border-default bg-surface-alt opacity-70 px-4 py-3">
                 <IdentificationIcon className="w-4 h-4 text-brand opacity-70" />
                 <span className="text-primary font-mono">{user.dni ?? "—"}</span>
